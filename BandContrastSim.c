@@ -42,15 +42,14 @@ int main(int argc, char *argv[]){
     bool readFacets = atoi(argv[6]);
     double alpha;
     alpha = atof(argv[5]);
-
     // Prep paths
     char *sampleDir, *simOutputDir, *afmFile, *measuredBCpath, *thetaFN, *phiFN;
     sampleDir = (char *)malloc(sizeof(char) * MAXPATH);
-    strcpy(sampleDir, getenv("HOME"));
+    strcpy(sampleDir, "/Users/mhaja");
     strcat(sampleDir, rootDir);
     strcat(sampleDir, argv[1]);
     strcat(sampleDir, "/");
-
+    
     // Make the simOutput directory if it does not exist.
     simOutputDir = (char *)malloc(sizeof(char) * MAXPATH);
     strcpy(simOutputDir, sampleDir);
