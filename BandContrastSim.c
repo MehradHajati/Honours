@@ -182,6 +182,7 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
     printf("Starting simulation\n");
     BandContrastAFMMapper bcAFMm;
     double rad = (180.0 - lightDeg) * M_PI / 180.0;
+    printf("the value of M_pi is: %d\n", M_PI);
     Vector3 light; 
     light.x = 0; light.y = cos(rad); light.z = -sin(rad);
     light = vector3_scale(light, 1 / vector3_magnitude(light));
