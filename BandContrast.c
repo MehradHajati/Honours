@@ -1,12 +1,20 @@
 #include "BandContrast.h"
 
+ 
+/**
+ * @brief Creates a new band contrast with the given dimensions.
+ * 
+ * @param nrow The number of rows. 
+ * @param ncol The number of columns.
+ * @return BandContrast A band contrast struct.
+ */
 BandContrast bandContrast_new(int nrow, int ncol){
     int row;
     BandContrast bc;
 
     bc.nrow = nrow;
     bc.ncol = ncol;
-
+    // allocating the required space for the pictures of EBDS, one for grey, one for red, blue and green
     bc.greyScale = (double**)malloc(sizeof(double*) * nrow);
     bc.EBSDred = (int**)malloc(sizeof(int*) * nrow);
     bc.EBSDgreen = (int**)malloc(sizeof(int*) * nrow);
@@ -21,7 +29,12 @@ BandContrast bandContrast_new(int nrow, int ncol){
 
     return bc;
 }
-
+ 
+/**
+ * @brief Frees memory allocate by the given band contrast struct.
+ * 
+ * @param bc The band contrast to free. 
+ */
 void bandContrast_free(BandContrast *bc){
     int row;
     for(row = 0; row < bc->nrow; row++){
@@ -36,10 +49,28 @@ void bandContrast_free(BandContrast *bc){
     free(bc->EBSDblue);
 }
 
+
+/**
+ * @brief Creates a band contrast based on the given light source.
+ * 
+ * @param facets The facets of the sample.
+ * @param light Vector in the direction of the illumination.
+ * @return BandContrast A light-based band contrast.
+ */
 BandContrast bandContrast_light(Facets *facets, Vector3 light){
     return bandContrast_fromPhiThetaMaps(facets->phiMap, facets->thetaMap, facets->nrow, facets->ncol, light);
 }
 
+/**
+ * @brief A utility used by bandContrast_light.
+ * 
+ * @param phimap The Phimap data.
+ * @param thetamap The Thetamap data.
+ * @param nrow Number of rows.
+ * @param ncol Number of cols.
+ * @param light Vector in the direction of the illumination.
+ * @return BandContrast A light-based band contrast.
+ */
 BandContrast bandContrast_fromPhiThetaMaps(double **phimap, double **thetamap, int nrow, int ncol, Vector3 light){
     int row, col;
     double cos2, angle;
@@ -73,6 +104,13 @@ BandContrast bandContrast_fromPhiThetaMaps(double **phimap, double **thetamap, i
     return bc;
 }
 
+/**
+ * @brief Create a band contrast based on a detector view. Monte Carlo approach.
+ * 
+ * @param facets The facets of the sample.
+ * @param afm The height information of the sample.
+ * @return BandContrast A detector-based band contrast.
+ */
 BandContrast bandContrast_detector(Facets *facets, AFMData *afm){
     int i, j, thetaIters, phiIters, randomIters;
     double theta, phi, deltaTheta, deltaPhi, avgZ, thetaMax, phiMax;
@@ -113,6 +151,16 @@ BandContrast bandContrast_detector(Facets *facets, AFMData *afm){
     return bc;
 }
 
+/**
+ * @brief Creates a list of band contrast structs (light, detector, and a linear combination of the two) scaled to match the average greyscale of the measured band contrast.
+ * 
+ * @param facets The facets of the smaple.
+ * @param afm The height information of the sample.
+ * @param light Vector in the direction of the illumination.
+ * @param alpha The fraction of the linear combination given to the light-based band contrast, rest is detector-based
+ * @param measured The measured band contrast.
+ * @return A list of band contrasts.
+ */
 BandContrast *simulateBandContrast(Facets *facets, AFMData *afm, Vector3 light, double alpha, BandContrast *measured){
     int i, j, row, col, randomIters, numBCs, iLight = 0, iVis = 1, iLinComboA = 2;
     double theta, phi, avgZ, avgVis, avgLight, avgLinCombo, maxVis, maxResult, thetaMax, phiMax, iVisScaleFactor, iLightScaleFactor, iLinComboScaleFactor, avgMeasured;
@@ -200,6 +248,15 @@ BandContrast *simulateBandContrast(Facets *facets, AFMData *afm, Vector3 light, 
     return bcs;
 }
 
+
+/**
+ * @brief Does tilting for the detector-based band contrast.
+ * 
+ * @param bc The detector-based band contrast.
+ * @param afm The height information of the sample.
+ * @param qTilt The quaternion by which to tilt the sample.
+ * @param avgZ The average height of the sample (used for tilting about COM).
+ */
 void bandContrast_tiltForDetector(BandContrast *bc, AFMData *afm, Quaternion qTilt, double avgZ){
     int row, col, newRow, newCol, isVisible, *lastVisibleRows, visRowWidth;
     Vector3 pos, newPos;
@@ -242,6 +299,14 @@ void bandContrast_tiltForDetector(BandContrast *bc, AFMData *afm, Quaternion qTi
     free(lastVisibleRows);
 }
 
+
+/**
+ * @brief Ensures the minimum of the height values rests at 0.
+ * 
+ * @param afm The AFM data to prep.
+ * @param avgZ Stores the average height in this variable.
+ * @param afmCOM Stores the COM of the sample in this variable.
+ */
 void bandContrast_prepAFMForDetector(AFMData *afm, double *avgZ, Vector3 *afmCOM){
     int row, col;
     double minZ = 1000000;
@@ -264,6 +329,14 @@ void bandContrast_prepAFMForDetector(AFMData *afm, double *avgZ, Vector3 *afmCOM
     *afmCOM = vector3_new(afm->xResolution / 2.0, afm->yResolution / 2.0, *avgZ);
 }
 
+ 
+/**
+ * @brief Creates a rotation quaternion from the given theta and phi angles.
+ * 
+ * @param theta Radians down from detector normal.
+ * @param phi Radians around detector normal.
+ * @return A rotation quaternion.
+ */
 Quaternion bandContrast_tiltFromThetaPhi(double theta, double phi){
     double st, yTheta, xTheta;
     Vector3 negXAxis;
@@ -295,6 +368,17 @@ Quaternion bandContrast_tiltFromThetaPhi(double theta, double phi){
     return qTilt;
 }
 
+
+/**
+ * @brief Computes the average grey value in the given band contrast within the given bounds.
+ * 
+ * @param bc The band contrast from which to get the average grey.
+ * @param startRow The starting row.
+ * @param endRow The ending row.
+ * @param startCol The starting column.
+ * @param endCol The ending column.
+ * @return The average grey.
+ */
 double bandContrast_averageGrey(BandContrast *bc, int startRow, int endRow, int startCol, int endCol){
     int row, col, nrow, ncol;
     double avg = 0.0;
@@ -312,6 +396,17 @@ double bandContrast_averageGrey(BandContrast *bc, int startRow, int endRow, int 
     return avg;
 }
 
+
+/**
+ * @brief Computes the standard deviation in the given band contrast within the given bounds.
+ * 
+ * @param bc The band contrast from which to get the standard deviation.
+ * @param startRow The starting row.
+ * @param endRow The ending row.
+ * @param startCol The starting column.
+ * @param endCol The ending column.
+ * @return The standard deviation. 
+ */
 double bandContrast_stdDev(BandContrast *bc, int startRow, int endRow, int startCol, int endCol){
     int row, col, nrow, ncol;
     double xi2 = 0, xi = 0;
@@ -330,6 +425,14 @@ double bandContrast_stdDev(BandContrast *bc, int startRow, int endRow, int start
     return deviation;
 }
 
+
+/**
+ * @brief Multiplies all values by 255.
+ * 
+ * @param vals The values to scale.
+ * @param nrow The number of rows to scale.
+ * @param ncol The number of columns to scale.
+ */
 void bandContrast_scaleTo255(double ***vals, int nrow, int ncol){
     int row, col;
 
@@ -340,6 +443,12 @@ void bandContrast_scaleTo255(double ***vals, int nrow, int ncol){
     }
 }
 
+
+/**
+ * @brief Flood-fills 0 values in the given band contrast.
+ * 
+ * @param bc The band contrast to fill.
+ */
 void bandContrast_fillGaps(BandContrast *bc){
     int dirs[4][2] = {
         { 1, 0 },

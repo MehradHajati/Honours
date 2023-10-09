@@ -1,6 +1,13 @@
 #include "AFMDataReader.h"
 #define MAXPATH 260
 
+
+/**
+ * @brief Creates an AFMData struct from the data in the given file that has not been binned. Meaning from the Atotech file
+ * 
+ * @param fileName The name of the file to read.
+ * @return AFMData An AFMData struct.
+ */
 AFMData afmData_readFromFile(char *fileName){
     int row, col;
     char *line, *tok;
@@ -15,6 +22,7 @@ AFMData afmData_readFromFile(char *fileName){
     afmData.xResolution = 0;
     afmData.yResolution = 0;
 
+    // allocating the memory for the outer matrix of the 2d matrix
     afmData.zValues = (double**)malloc(sizeof(double*) * xCapacity);
 
     // Read file again for values
@@ -23,7 +31,9 @@ AFMData afmData_readFromFile(char *fileName){
     printf("Reading AFM data...\n");
     fflush(stdout);
 
+    // while the length of the next line is not zero continue reading
     while(strlen(line = readLine(&file)) > 0){
+        // working with the lines and allocating space for them here
         if(afmData.xResolution == xCapacity){
             xCapacity *= 2;
             tmpp = (double **)realloc(afmData.zValues, sizeof(double*) * xCapacity);
@@ -36,7 +46,9 @@ AFMData afmData_readFromFile(char *fileName){
         afmData.zValues[afmData.xResolution] = (double*)calloc(yCapacity, sizeof(double));
 
         if(afmData.xResolution == 0){
+            // seperating the line by tab and taking each of the numbers one by one
             tok = strtok(line, "\t");
+            // while the tok is not null continue reading and allocating space for the numbers, if tok is that means we at the end of the line
             while(tok != NULL){
                 if(afmData.yResolution == yCapacity){
                     yCapacity *= 2;
@@ -69,6 +81,12 @@ AFMData afmData_readFromFile(char *fileName){
     return afmData;
 }
 
+/**
+ * @brief Creates an AFMData struct from the data in the given file that has been binned.
+ * 
+ * @param fileName The name of the file to read.
+ * @return AFMData An AFMData struct.
+ */
 AFMData afmData_readBinnedFromFile(char *fileName){
     int row, col, xCapacity, yCapacity;
     char line[100];
@@ -78,9 +96,10 @@ AFMData afmData_readBinnedFromFile(char *fileName){
     fflush(stdout);
 
     FILE *file;
-    
+    // opening the file to read it
     file = fopen(fileName, "r");
     fgets(line, 100, file);
+    // getting the x and y capacity
     xCapacity = atoi(line);
     printf("xCapacity: %d\n", xCapacity);
     fgets(line, 100, file);

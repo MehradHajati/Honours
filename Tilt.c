@@ -1,11 +1,19 @@
 #include "Tilt.h"
-
+ 
+/**
+ * @brief Creates a new sample struct that can be tilted.
+ * 
+ * @param afm The afm data to tilt with the sample.
+ * @param bc The band contrast data to tilt with the sample.
+ * @return The new sample (untilted). 
+ */
 Sample sample_new(AFMData *afm, BandContrast *bc){
     int row, col;
     Sample smpl;
     smpl.numRows = afm->xResolution;
     smpl.numCols = afm->yResolution;
 
+    // allocating all the first layer of memory required
     smpl.data = (double ***)malloc(smpl.numRows * sizeof(double));
     smpl.tilt = (double ***)malloc(smpl.numRows * sizeof(double));
     smpl.assigned = (int **)malloc(smpl.numRows * sizeof(int *));
@@ -15,6 +23,7 @@ Sample sample_new(AFMData *afm, BandContrast *bc){
     // allocate origng stuff 
 
     for(row = 0; row < smpl.numRows; row++){
+        // allocating the memory for the second layer of memory to create the matrices
         smpl.data[row] = (double **)malloc(smpl.numCols * sizeof(double));
         smpl.tilt[row] = (double **)malloc(smpl.numCols * sizeof(double));
         smpl.assigned[row] = (int *)calloc(smpl.numCols, sizeof(int));
@@ -23,6 +32,7 @@ Sample sample_new(AFMData *afm, BandContrast *bc){
         smpl.bestZ[row] = (double *)calloc(smpl.numCols, sizeof(double));
 
         for(col = 0; col < smpl.numCols; col++){
+            // allocating the third layer for 3d matrices
             smpl.data[row][col] = (double *)malloc(SAMPLE_DEPTH * sizeof(double));
             smpl.tilt[row][col] = (double *)malloc(SAMPLE_DEPTH * sizeof(double));
             
@@ -38,6 +48,11 @@ Sample sample_new(AFMData *afm, BandContrast *bc){
     return smpl;
 }
 
+/**
+ * @brief Frees memory allocated by the given sample.
+ * 
+ * @param smpl The sample to free.
+ */
 void sample_free(Sample *smpl){
     int row, col;
     for(row = 0; row < smpl->numRows; row++){
@@ -61,6 +76,12 @@ void sample_free(Sample *smpl){
     free(smpl->bestZ);
 }
 
+/**
+ * @brief Tilts the given sample.
+ * 
+ * @param smpl The sample to tilt.
+ * @param phi The angle by which to tilt the sample.
+ */
 void sample_tilt(Sample *smpl, double phi){
 // last argument is always 1.0
     int row, col, tmpRow, zCount = 0, lastMappedRow, newCol, newRow;
@@ -87,17 +108,20 @@ void sample_tilt(Sample *smpl, double phi){
         for(row = 0; row < smpl->numRows; row++){
             pos = vector3_new(col, row, (smpl->data[row][col][Z_VALUES] - minZ - avgZ));
             newPos = pos;
-            newPos.x -= (double)smpl->numCols * 0.5;  // center everything for the tilt
+            // center everything for the tilt
+            newPos.x -= (double)smpl->numCols * 0.5;  
             newPos.y -= (double)smpl->numRows * 0.5;
-            quaternion_rotateVector3AxisAngle(&newPos, -1.0, 0, 0, phi);            
-            newPos.x += (double)smpl->numCols * 0.5;  // push everything back
+            quaternion_rotateVector3AxisAngle(&newPos, -1.0, 0, 0, phi);  
+            // push everything back          
+            newPos.x += (double)smpl->numCols * 0.5;  
             newPos.y += (double)smpl->numRows * 0.5;
             newCol = floor(newPos.x + 0.5);
             newRow = floor(newPos.y + 0.5);
             newZ = smpl->data[row][col][Z_VALUES] - minZ;
             oldZ = newZ -avgZ;
 
-            if(newRow>lastMappedRow && newRow>=0 && newRow<smpl->numRows && newCol>=0 && newCol<smpl->numCols) { //mapOldPointToTilt
+            //mapOldPointToTilt
+            if(newRow>lastMappedRow && newRow>=0 && newRow<smpl->numRows && newCol>=0 && newCol<smpl->numCols) { 
                 lastMappedRow = newRow; 
                 smpl->tilt[newRow][newCol][Z_VALUES] = oldZ;
                 smpl->tilt[newRow][newCol][BAND_CONTRAST] = smpl->data[row][col][BAND_CONTRAST];
@@ -109,7 +133,15 @@ void sample_tilt(Sample *smpl, double phi){
         }
     }
 }
-
+ 
+/**
+ * @brief Creates an AFMData struct from the AFM data stored in data.
+ * 
+ * @param numRows The number of rows in the data. 
+ * @param numCols The number of columnc in the data.
+ * @param data The data containing the afm data (from a sample struct).
+ * @return An AFMData struct. 
+ */
 AFMData sample_getAFM(int numRows, int numCols, double ****data){
     int row, col;
     AFMData afmData = afmData_new(numRows, numCols);
@@ -123,6 +155,14 @@ AFMData sample_getAFM(int numRows, int numCols, double ****data){
     return afmData;
 }
 
+/**
+ * @brief Creates a BandContrast struct from the band contrast data stored in data.
+ * 
+ * @param numRows The number of rows in the data.
+ * @param numCols The number of columnc in the data.
+ * @param data The data containing the band contrast data (from a sample struct).
+ * @return A BandContrast struct. 
+ */
 BandContrast sample_getBandContrast(int numRows, int numCols, double ****data){
     int row, col;
     BandContrast bc = bandContrast_new(numRows, numCols);
@@ -136,18 +176,43 @@ BandContrast sample_getBandContrast(int numRows, int numCols, double ****data){
     return bc;
 }
 
+ 
+/**
+ * @brief Creates an AFMData struct from the tilted AFM data in the given sample.
+ * 
+ * @param smpl The sample from which to get the AFM data.
+ * @return An AFMData struct.
+ */
 AFMData sample_getTiltedAFMFromSample(Sample *smpl){
     return sample_getAFM(smpl->numRows, smpl->numCols, &smpl->tilt);
 }
-
+ 
+/**
+ * @brief Creates a BandContrast struct from the tilted band contrast data in the given sample.
+ * 
+ * @param smpl The sample from which to get the band contrast data.
+ * @return A BandContrast struct. 
+ */
 AFMData sample_getAFMFromSample(Sample *smpl){
     return sample_getAFM(smpl->numRows, smpl->numCols, &smpl->data);
 }
 
+/**
+ * @brief Creates an AFMData struct from the untilted AFM data in the given sample.
+ * 
+ * @param smpl The sample from which to get the AFM data.
+ * @return An AFMData struct.
+ */
 BandContrast sample_getTiltedBandContrastFromSample(Sample *smpl){
     return sample_getBandContrast(smpl->numRows, smpl->numCols, &smpl->tilt);
 }
 
+/**
+ * @brief Creates a BandContrast struct from the untilted band contrast data in the given sample.
+ * 
+ * @param smpl The sample from which to get the band contrast data.
+ * @return A BandContrast struct. 
+ */
 BandContrast sample_getBandContrastFromSample(Sample *smpl){
     return sample_getBandContrast(smpl->numRows, smpl->numCols, &smpl->data);
 }

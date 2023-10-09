@@ -1,6 +1,12 @@
 #include "BandContrastReader.h"
 #define MAXPATH 260
 
+/**
+ * @brief Creates a band contrast struct from the data in the given file.
+ * 
+ * @param path The name of the file to read.
+ * @return A band contrast struct. 
+ */
 BandContrast bandContrast_readFromFile(char *path){
     int row, col, nrows, ncols;
     char *line, *tok;
@@ -18,6 +24,7 @@ BandContrast bandContrast_readFromFile(char *path){
     file = fopen(fn, "r");
     printf("Determining Resolution for file %s\n", fn);
     fflush(stdout);
+    //counting the number of columns and rows in this while loop
     while(strlen(line = readLine(&file)) > 0){
         if(nrows == 0){
             // count cols
@@ -40,6 +47,7 @@ BandContrast bandContrast_readFromFile(char *path){
     printf("Reading Band Contrast data...\n");
     file = fopen(fn, "r");
     free(fn);
+    // for loop to read each line of the file for the band contrast data
     for(row = 0; row < nrows; row++){
         line = readLine(&file);
         tok = strtok(line, " ");
@@ -53,7 +61,7 @@ BandContrast bandContrast_readFromFile(char *path){
 
     printf("Reading Euler data...\n");
 
-    // red
+    // reading the red part of the euler data with the for loop to go over every line in the file and the strtok will seperate them based on space
     fn = (char *)malloc(sizeof(char) * MAXPATH);
     strcpy(fn, path);
     strcat(fn, "EBSDred.txt");
@@ -71,7 +79,7 @@ BandContrast bandContrast_readFromFile(char *path){
     }
     fclose(file);
 
-    // green
+    // reading the green part of the euler data with the for loop to go over every line in the file and the strtok will seperate them based on space
     fn = (char *)malloc(sizeof(char) * MAXPATH);
     strcpy(fn, path);
     strcat(fn, "EBSDgreen.txt");
@@ -89,7 +97,7 @@ BandContrast bandContrast_readFromFile(char *path){
     }
     fclose(file);
 
-    // blue
+    // reading the blue part of the euler data with the for loop to go over every line in the file and the strtok will seperate them based on space
     fn = (char *)malloc(sizeof(char) * MAXPATH);
     strcpy(fn, path);
     strcat(fn, "EBSDblue.txt");

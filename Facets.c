@@ -1,12 +1,21 @@
 #include "Facets.h"
 
+/**
+ * @brief Creates a new Facets struct with the given number of rows and columns for storing theta and phi values.
+ * 
+ * @param nrow The number of rows.
+ * @param ncol The number of columns.
+ * @return A new Facets struct. 
+ */
 Facets facets_new(int nrow, int ncol){
     int row, col;
     Facets facets;
     facets.nrow = nrow;
     facets.ncol = ncol;
+    // allocating memory for the first layer of the 2d matrix of the theta and phi maps
     facets.thetaMap = (double **)malloc(sizeof(double*) * facets.nrow);
     facets.phiMap = (double **)malloc(sizeof(double*) * facets.nrow);
+    // allocating memory for the second layer of the 2d matrix of the theta and phi maps and filling them with default values
     for(row = 0; row < facets.nrow; row++){
         facets.thetaMap[row] = (double*)malloc(sizeof(double) * facets.ncol);
         facets.phiMap[row] = (double*)malloc(sizeof(double) * facets.ncol);
@@ -18,6 +27,17 @@ Facets facets_new(int nrow, int ncol){
     return facets;
 }
 
+/**
+ * @brief Creates a new face for determining facets.
+ * 
+ * @param row Row position of the face.
+ * @param col Column position of the face.
+ * @param size The size of the face.
+ * @param rssAvg The reduced sum of the squares average. 
+ * @param theta The theta of the face normal.
+ * @param phi The phi of the face normal.
+ * @return A face struct.
+ */
 Face face_new(int row, int col, int size, double rssAvg, double theta, double phi){
     Face face;
     face.row = row;
@@ -29,6 +49,16 @@ Face face_new(int row, int col, int size, double rssAvg, double theta, double ph
     return face;
 }
 
+/**
+ * @brief Computes the facets from the given AFM data.
+ * 
+ * @param afmData The AFM data for which to get facet information.
+ * @param minFacetSize The smallest facet size (ODD).
+ * @param maxFacetSize The largest facets size (ODD).
+ * @param maxRSSAvg The largest reduced sum of the squares allowed.
+ * @param binIters The number of time to bin the given AFM data before computing the facets.
+ * @return The facets for the given AFM data. 
+ */
 Facets facets_compute(AFMData *afmData, int minFacetSize, int maxFacetSize, double maxRSSAvg, int binIters){
     AFMData afmBinned = *afmData;
     //afmData_flipY(&afmBinned);
@@ -50,6 +80,16 @@ Facets facets_compute(AFMData *afmData, int minFacetSize, int maxFacetSize, doub
     return facets;
 }
 
+
+/**
+ * @brief Repeatedly places "tiles" of the given size on the afmData grid and attempts to find sections with sufficiently low RSS averages. 
+ * If found, theta and phi angles are computed and stored in the given Facets struct where available.
+ * 
+ * @param afmData The data to place tiles on.
+ * @param facets The Facets struct to store theta and phi information in.
+ * @param tileSize The size of a face.
+ * @param maxRSSAvg The size of each tile to place.
+ */
 void facets_tileArea(AFMData *afmData, Facets *facets, int tileSize, double maxRSSAvg){
     time_t startTime = time(0);
     int validFacesSize, i, row, col;
@@ -62,6 +102,8 @@ void facets_tileArea(AFMData *afmData, Facets *facets, int tileSize, double maxR
         // printf("RSS_avg: %f\n", cur.rssAvg);
         for(row = cur.row; row < cur.row + cur.size; row++){
             for(col = cur.col; col < cur.col + cur.size; col++){
+                // Only changing it if the values already stored there are default values,
+                // Only checking if the theta is default because if one of them is the other one is aswell.
                 if(facets->thetaMap[row][col] == THETA_DEFAULT){
                     facets->thetaMap[row][col] = cur.theta;
                     facets->phiMap[row][col] = cur.phi;
@@ -78,6 +120,17 @@ void facets_tileArea(AFMData *afmData, Facets *facets, int tileSize, double maxR
     fflush(stdout);
 }
 
+
+/**
+ * @brief Creates an array of faces that have an RSS average within the required limits.
+ * 
+ * @param facets The Facets struct to store theta and phi information in.
+ * @param afmData The data to create faces from.
+ * @param tileSize The size of a face.
+ * @param outArraySize The size of the Face array created.
+ * @param maxRSSAvg The size of each tile to place.
+ * @return An array of faces.
+ */
 Face *facets_findValidFaces(Facets *facets, AFMData *afmData, int tileSize, int *outArraySize, double maxRSSAvg){
     int row, col, tileRow, tileCol, count = 0, capacity = 16, all = 0;
     int tileMoveDist = tileSize / 2;
@@ -118,8 +171,21 @@ Face *facets_findValidFaces(Facets *facets, AFMData *afmData, int tileSize, int 
     return faces;
 }
 
-int facets_findFace(AFMData *afmData, Face *tmpFace, struct Matrix *betaMatrix, struct Matrix *X, int tileRow, int tileCol, int tileSize, double maxRSSAvg)
-{
+
+/**
+ * @brief Attempts to find a face at the given location in the afmData. If found, the face is stored in tmpFace and a non-zero integer is returned.
+ * 
+ * @param afmData The afmData to find a face in.
+ * @param tmpFace The face to store the found face in.
+ * @param betaMatrix 
+ * @param X 
+ * @param tileRow The row of the upper left corner of the face. 
+ * @param tileCol The column of the upper left corner of the face.
+ * @param tileSize The size of the face to make.
+ * @param maxRSSAvg The size of each tile to place.
+ * @return 0 if a face is not found. Non-zero otherwise.
+ */
+int facets_findFace(AFMData *afmData, Face *tmpFace, struct Matrix *betaMatrix, struct Matrix *X, int tileRow, int tileCol, int tileSize, double maxRSSAvg){
     int row, col;
     double theta, phi, aa, bb, cc, coeffMagnitude, nMagnitude;
     struct Matrix *zVals, *betaHat, *yHat, *e, *et, *RSS;
@@ -182,6 +248,15 @@ int facets_findFace(AFMData *afmData, Face *tmpFace, struct Matrix *betaMatrix, 
     return tmpFace->rssAvg < maxRSSAvg;
 }
 
+
+/**
+ * @brief Adds toAdd to faces.
+ * 
+ * @param faces A pointer to the array of faces to add to.
+ * @param toAdd The face to add.
+ * @param count The number of faces currently in faces.
+ * @param capacity The capacity of faces.
+ */
 void facets_addToFaces(Face **faces, Face toAdd, int *count, int *capacity){
     if(*faces == NULL) *faces = (Face *)calloc(sizeof(Face), *capacity);
     
@@ -197,6 +272,14 @@ void facets_addToFaces(Face **faces, Face toAdd, int *count, int *capacity){
     }
 }
 
+
+/**
+ * @brief A comparator for sorting Face structs by RSS.
+ * 
+ * @param f1 Face 1
+ * @param f2 Face 2
+ * @return The priority of f1 where smaller numbers have higher priority.
+ */
 int facets_cmpFacesByRSS(const void *f1, const void *f2){
     double diff = ((Face*)f1)->rssAvg - ((Face*)f2)->rssAvg;
 

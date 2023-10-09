@@ -1,5 +1,12 @@
 #include "FacetsReader.h"
 
+/**
+ * @brief Creates a facets struct form the given theta and phi map files.
+ * 
+ * @param thetaFn The path to the theta map. 
+ * @param phiFn The path to the phi map.
+ * @return A facets struct. 
+ */
 Facets facets_readFromFiles(char *thetaFn, char *phiFn){
     int row, col, nrows, ncols;
     char *line, *tok;
@@ -12,10 +19,10 @@ Facets facets_readFromFiles(char *thetaFn, char *phiFn){
 
     nrows = 0;
     ncols = 0;
-
+    // while the length of the read in line is greater than 0, the loop will continue
     while(strlen(line = readLine(&fTheta)) > 0){
         if(nrows == 0){
-            // count cols
+            // counting the number of columns and rows in the files
             tok = strtok(line, " ");
             while(tok != NULL){
                 ncols++;
@@ -37,19 +44,23 @@ Facets facets_readFromFiles(char *thetaFn, char *phiFn){
     fflush(stdout);
 
     fTheta = fopen(thetaFn, "r");
-
+    // reading the data here
     for(col = 0; col < ncols; col++){
         line = readLine(&fTheta);
+        // using strtok and space to get each of the individual numbers
         tok = strtok(line, " ");
         for(row = 0; row < nrows; row++){
+            // using atof to convert the string (tok) into an integer
             facets.thetaMap[row][col] = atof(tok);
             tok = strtok(NULL, " ");
         }
         free(line);
 
         line = readLine(&fPhi);
+        // using strtok and space to get each of the individual numbers
         tok = strtok(line, " ");
         for(row = 0; row < nrows; row++){
+            // using atof to convert the string (tok) into an integer
             facets.phiMap[row][col] = atof(tok);
             tok = strtok(NULL, " ");
         }

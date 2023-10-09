@@ -1,5 +1,14 @@
 #include "Quaternion.h"
 
+/**
+ * @brief Creates a Quaternion with the given values.
+ * 
+ * @param x x value.
+ * @param y y value.
+ * @param z z value.
+ * @param w w value.
+ * @return A newly constructed Quaternion. 
+ */
 Quaternion quaternion_new(double x, double y, double z, double w){
     Quaternion quat;
     quat.x = x;
@@ -9,14 +18,36 @@ Quaternion quaternion_new(double x, double y, double z, double w){
     return quat;
 }
 
+
+/**
+ * @brief Creates a Quaternion where all of its values are 0. Used as NULL.
+ * 
+ * @return A new Quaternion with all zero values
+ */
 Quaternion quaternion_zero(){
     return quaternion_new(0,0,0,0);
 }
 
+
+/**
+ * @brief Checks if the given quaternions are equivalent.
+ * 
+ * @param q1 The first quaternion.
+ * @param q2 The second quaternion.
+ * @return True if they are equal, false otherwise. 
+ */
 int quaternion_equals(Quaternion q1, Quaternion q2){
     return q1.w == q2.w && q1.x == q2.x && q1.y == q2.y && q1.z == q2.z;
 }
 
+/**
+ * @brief The Hamiltonian Product of two quaternions. 
+ * If q1 and q2 are rotation quaternions (magnitudes of 1), this returns the result of rotating q2 by q1.
+ * 
+ * @param q1 The first quaternion.
+ * @param q2 The second quaternion.
+ * @return The hamiltonian product of the two given quaternions.
+ */
 Quaternion quaternion_multiply(Quaternion q1, Quaternion q2){
     Quaternion quat;
 
@@ -28,6 +59,11 @@ Quaternion quaternion_multiply(Quaternion q1, Quaternion q2){
     return quat;
 }
 
+/**
+ * @brief Normalizes this quaternion to have a magnitude of 1, making it a rotation quaternion.
+ * 
+ * @param quat The quaternion to normalize.
+ */
 void quaternion_normalize(Quaternion *quat){    
     double magnitude = sqrt(quat->w*quat->w + quat->x*quat->x + quat->y*quat->y + quat->z*quat->z);
     quat->w /= magnitude;
@@ -35,7 +71,13 @@ void quaternion_normalize(Quaternion *quat){
     quat->y /= magnitude;
     quat->z /= magnitude;
 }
-
+ 
+/**
+ * @brief Converts the given euler angles to a rotation quaternion. Assumes the euler angles are intrinsic and about the Z-X-Z axes.
+ * 
+ * @param euler The euler angles to convert.
+ * @return The rotation quaternion representation of the given euler angles.
+ */
 Quaternion quaternion_fromEulerAngles(Vector3 euler){
     euler = vector3_scale(euler, M_PI / 180.0);
 
@@ -55,6 +97,14 @@ Quaternion quaternion_fromEulerAngles(Vector3 euler){
     return quat;
 }
 
+
+/**
+ * @brief Converts the given quaternion to intrinsic proper euler angles in radians in the Z-X-Z 
+ * sequence following the generalized converstion algorithm found here: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9648712/
+ * 
+ * @param quat The quaternion to convert.
+ * @return A Vector3 containing the euler angles in the Z-X-Z order. 
+ */
 Vector3 quaternion_toEulerAngles(Quaternion quat){
     if(quaternion_equals(quat, quaternion_zero())) return vector3_new(0,0,0);
     double theta1, theta2, theta3, thetaPlus, thetaMinus, a, b, c, d, epsilon;
@@ -101,10 +151,24 @@ Vector3 quaternion_toEulerAngles(Quaternion quat){
     return vector3_new(theta3, theta2, theta1);
 }
 
+/**
+ * @brief Converts the given quaternion to intrinsic proper euler angles in degrees in the Z-X-Z 
+ * sequence following the generalized converstion algorithm found here: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9648712/
+ * 
+ * @param quat The quaternion to convert.
+ * @return A Vector3 containing the euler angles in the Z-X-Z order.
+ */
 Vector3 quaternion_toEulerAnglesDegrees(Quaternion quat){
     return vector3_scale(quaternion_toEulerAngles(quat), 180.0 / M_PI);
 }
 
+/**
+ * @brief Rotates the given quaternion about degrees many degrees about the given axis.
+ * 
+ * @param quat The quaternion to rotate.
+ * @param degrees The number of degrees by which to rotate the quaternion.
+ * @param axis The axis to rotate the quaternion around ('x','y', or 'z').
+ */
 void quaternion_rotateAboutAxisByDegrees(Quaternion *quat, double degrees, char axis){
     Quaternion rotateBy;
     double theta = degrees * M_PI / 180.0;
@@ -115,13 +179,30 @@ void quaternion_rotateAboutAxisByDegrees(Quaternion *quat, double degrees, char 
     *quat = quaternion_multiply(rotateBy, *quat);
     quaternion_normalize(quat);
 }
-
+ 
+/**
+ * @brief Rotates the given quaternion intrinsically by p1, P, and p2.
+ * 
+ * @param quat The quaternion to rotate
+ * @param p1 The angle by which to rotate around the Z axis the first time.
+ * @param P The angle by which to rotate around the X axis.
+ * @param p2 The angle by which to rotate around the Z axis the second time.
+ */
 void quaternion_applyIntrinsicZXZRotation(Quaternion *quat, double p1, double P, double p2){
     quaternion_rotateAboutAxisByDegrees(quat, p2, 'z');
     quaternion_rotateAboutAxisByDegrees(quat, P, 'x');
     quaternion_rotateAboutAxisByDegrees(quat, p1, 'z');
 }
-
+ 
+/**
+ * @brief Rotates the given vector about an axis made from x, y, z by deg degrees.
+ * 
+ * @param v The vector to rotate
+ * @param x The x component of the axis.
+ * @param y The y component of the axis.
+ * @param z The z component of the axis.
+ * @param deg Degrees by which to rotate.
+ */
 void quaternion_rotateVector3AxisAngle(Vector3 *v, double x, double y, double z, double deg){
     double theta, st, axisMagnitude;
     Vector3 axis = vector3_new(x, y, z);
@@ -144,7 +225,13 @@ void quaternion_rotateVector3AxisAngle(Vector3 *v, double x, double y, double z,
     v->y = vec.y;
     v->z = vec.z;
 }
-
+ 
+/**
+ * @brief Rotates the given vector by the given quaternion.
+ * 
+ * @param v The vector to rotate. 
+ * @param q The quaternion by which to rotate the vector.
+ */
 void quaternion_rotateVector3ByQuat(Vector3 *v, Quaternion q){
     Quaternion conj, vecQuat;
     conj = quaternion_new(-q.x, -q.y, -q.z, q.w);

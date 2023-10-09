@@ -1,5 +1,12 @@
 #include "Matrix.h"
 
+/**
+ * @brief Creates a new Matrix with the given number of rows and columns.
+ * 
+ * @param nrow The number of rows.
+ * @param ncol The number of columns.
+ * @return A new Matrix with the given number of rows and columns.
+ */
 struct Matrix *matrix_new(int nrow, int ncol){
     struct Matrix *m = (struct Matrix *)malloc(sizeof(struct Matrix));
     m->vals = (double **)malloc(sizeof(double *) * nrow);
@@ -11,7 +18,13 @@ struct Matrix *matrix_new(int nrow, int ncol){
     m->ncol = ncol;
     return m;
 }
-
+ 
+/**
+ * @brief Creates a new Matrix with the same values as the given Matrix.
+ * 
+ * @param M The matrix to copy.
+ * @return A copy of the given matrix. 
+ */
 struct Matrix *matrix_copy(struct Matrix *M){
     struct Matrix *cpy = matrix_new(M->nrow, M->ncol);
     int row, col;
@@ -22,7 +35,12 @@ struct Matrix *matrix_copy(struct Matrix *M){
     }
     return cpy;
 }
-
+ 
+/**
+ * @brief Frees memory allocated for the given Matrix.
+ * 
+ * @param M The Matrix to free.
+ */
 void matrix_free(struct Matrix *M){
     int i;
     for(i = 0; i < M->nrow; i++){
@@ -32,6 +50,13 @@ void matrix_free(struct Matrix *M){
     free(M);
 }
 
+/**
+ * @brief Multiplies M1 by M2 using matrix multiplication. Requires the number of columns in M1 to equal the number of rows in M2.
+ * 
+ * @param M1 The first Matrix.
+ * @param M2 The second Matrix.
+ * @return The product of M1 and M2 using matrix multiplication.
+ */
 struct Matrix *matrix_multiply(struct Matrix *M1, struct Matrix *M2){
     if(M1->ncol != M2->nrow){
         printf("The given matrices cannot be multiplied together.\n A:%dx%d\nB:%dx%d\n", M1->nrow, M1->ncol, M2->nrow, M2->ncol);
@@ -48,6 +73,12 @@ struct Matrix *matrix_multiply(struct Matrix *M1, struct Matrix *M2){
     return product;
 }
 
+/**
+ * @brief Scales the given Matrix by the given scalar.
+ * 
+ * @param M The Matrix to scale.
+ * @param scalar he scalar by which to multiply M.
+ */
 void matrix_scalarMultiply(struct Matrix *M, double scalar){
     int row, col;
     for(row = 0; row < M->nrow; row++){
@@ -57,6 +88,13 @@ void matrix_scalarMultiply(struct Matrix *M, double scalar){
     }
 }
 
+/**
+ * @brief Gets the sum of the two given matrices.
+ * 
+ * @param M1 The first matrix.
+ * @param M2 The second Matrix.
+ * @return The result of the addition. 
+ */
 struct Matrix * matrix_add(struct Matrix *M1, struct Matrix *M2){
     struct Matrix *sum = matrix_new(M1->ncol, M1->nrow);
     int row, col;
@@ -68,6 +106,12 @@ struct Matrix * matrix_add(struct Matrix *M1, struct Matrix *M2){
     return sum;
 }
 
+
+/**
+ * @brief Gets the transpose of the given Matrix.
+ * 
+ * @param M The matrix to transpose.
+ */
 void matrix_transpose(struct Matrix **M){
     struct Matrix *T = matrix_new((*M)->ncol, (*M)->nrow);
     int row, col;
@@ -81,6 +125,11 @@ void matrix_transpose(struct Matrix **M){
     *M = T;
 }
 
+/**
+ * @brief Gets the inverse of the given matrix if one exists.
+ * 
+ * @param M The matrix to invert.
+ */
 void matrix_inverse(struct Matrix **M){
     int row, col;
     int size = (*M)->nrow;
@@ -106,6 +155,12 @@ void matrix_inverse(struct Matrix **M){
     *M = inv;
 }
 
+/**
+ * @brief Gets the left inverse (Moore Penrose) of the given Matrix: (M^T * M)^(-1) * M^T
+ * 
+ * @param M The matrix to get the left inverse of.
+ * @return The left inverse of M.
+ */
 struct Matrix *matrix_leftInverse(struct Matrix *M){
     struct Matrix *T = matrix_copy(M), *TM, *leftInv;
 
@@ -119,6 +174,11 @@ struct Matrix *matrix_leftInverse(struct Matrix *M){
     return leftInv;
 }
 
+/**
+ * @brief Gets the reduced row echelon form of the given matrix
+ * 
+ * @param M The matrix to reduce.
+ */
 void matrix_rref(struct Matrix *M){
     int nrow, ncol, lead, row, col, i;
     double *tmpRow, lv;
@@ -154,6 +214,17 @@ void matrix_rref(struct Matrix *M){
     }
 }
 
+
+/**
+ * @brief Computes the dot product of the given arrays.
+ * 
+ * @param M1 The first array.
+ * @param M2 The second array.
+ * @param row The row in question.
+ * @param col The column in question.
+ * @param size The size of the arrays.
+ * @return The dot product of row and col.
+ */
 double matrix_rowColDotProduct(struct Matrix *M1, struct Matrix *M2, int row, int col, int size){
     int i;
     double total = 0.0;
@@ -163,6 +234,12 @@ double matrix_rowColDotProduct(struct Matrix *M1, struct Matrix *M2, int row, in
     return total;
 }
 
+/**
+ * @brief  Creates a string representation of the given matrix.
+ * 
+ * @param M The matrix to get a string representation of.
+ * @return A string representing the given matrix.
+ */
 char *matrix_toString(struct Matrix *M){
     static int BASE_STR_LEN = 16;
     int count = 0, capacity = BASE_STR_LEN;
@@ -181,6 +258,13 @@ char *matrix_toString(struct Matrix *M){
     return str;
 }
 
+
+/**
+ * @brief Creates an rotation matrix that rotates degrees degrees about the x axis.
+ * 
+ * @param degrees degrees to rotate by
+ * @return struct Matrix 
+ */
 struct Matrix *matrix_xRot(double degrees){
     double rads = degrees * PI / 180.0;
     struct Matrix *rotMatrix = matrix_new(3,3);
@@ -191,6 +275,12 @@ struct Matrix *matrix_xRot(double degrees){
     return rotMatrix;
 }
 
+/**
+ * @brief Creates an rotation matrix that rotates degrees degrees about the y axis.
+ * 
+ * @param degrees degrees to rotate by
+ * @return struct Matrix
+ */
 struct Matrix *matrix_yRot(double degrees){
     double rads = degrees * PI / 180.0;
     struct Matrix *rotMatrix = matrix_new(3,3);
@@ -201,6 +291,12 @@ struct Matrix *matrix_yRot(double degrees){
     return rotMatrix;
 }
 
+/**
+ * @brief Creates an rotation matrix that rotates degrees degrees about the z axis.
+ * 
+ * @param degrees degrees to rotate by
+ * @return struct Matrix
+ */
 struct Matrix *matrix_zRot(double degrees){
     double rads = degrees * PI / 180.0;
     struct Matrix *rotMatrix = matrix_new(3,3);
