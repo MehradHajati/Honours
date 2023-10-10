@@ -2,7 +2,7 @@
 
  
 /**
- * @brief Creates a new band contrast with the given dimensions.
+ * @brief Creates a new band contrast with the given dimensions and allocated the memory space for each component.
  * 
  * @param nrow The number of rows. 
  * @param ncol The number of columns.
@@ -75,13 +75,15 @@ BandContrast bandContrast_fromPhiThetaMaps(double **phimap, double **thetamap, i
     int row, col;
     double cos2, angle;
     Vector3 n, negLight;
+    // allocating the memory for the new bandcontrast object
     BandContrast bc = bandContrast_new(nrow, ncol);
 
+    // converting all the componenet in the vector to negative version of themselves
     negLight = vector3_scale(light, -1.0);
     
     for(row = 0; row < nrow; row++){
         for(col = 0; col < ncol; col++){
-            // Don't have info
+            // Don't have info so setting the greyscale equal to zero
             if(thetamap[row][col] == THETA_DEFAULT){
                 bc.greyScale[row][col] = 0;
                 continue;

@@ -219,6 +219,7 @@ Vector3 vector3_random(double maxRadius){
  * @return A vector created from theta and phi.
  */
 Vector3 vector3_fromThetaPhi(double theta, double phi){
+    // converting the angles of the theta and phi to radians
     theta *= M_PI / 180.0;
     phi *= M_PI / 180.0;
     Vector3 n;
