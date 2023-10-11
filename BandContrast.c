@@ -171,24 +171,33 @@ BandContrast *simulateBandContrast(Facets *facets, AFMData *afm, Vector3 light, 
     numBCs = 3;
     BandContrast *bcs;
 
+    // the random iters are for the monte carlo method and are set automatically at 100, for more iterations this number would have to be increased
     randomIters = 100;
+    // the theta and phi max are set as 70 degrees and 2 degrees, these are preset values and are converted to radians. 
     thetaMax = 70.0 * M_PI / 180.0;
     phiMax = 2.0 * M_PI;
     
     bcs = (BandContrast *)calloc(numBCs, sizeof(BandContrast));
+    // calling the bandContrast_light method which will create the light view image which tell us what the light can see based on the given light angle
     bcs[iLight] = bandContrast_light(facets, light);
+    // this for loop depends on the preset value of iVis which is set to 1 so it only creates one detector view picture
+    // in order for more detector pictures to be created the preset iVis value needs to be increased. 
     for(i = iVis; i < numBCs; i++){
         bcs[i] = bandContrast_new(afm->xResolution, afm->yResolution);
     }
 
+    // find the minimum and the average and then reduces all z data by the minimum and the average aswell
+    // This way the smallest z value is at 0
     bandContrast_prepAFMForDetector(afm, &avgZ, &afmCOM);
 
     // Create iVis
+    // this for loop depends on the randomIters value which is preset to 100 so a hundred iterations
     for(i = 1; i <= randomIters; i++){
         if(i % 10 == 0){
             printf("iVis tilt %d/%d...\n", i, randomIters);
             fflush(stdout);
         }
+        // doing the monte carlo method here by creating random theta and phi values
         theta = randomPercentage() * thetaMax;
         phi = randomPercentage() * phiMax;
         qTilt = bandContrast_tiltFromThetaPhi(theta, phi);
@@ -311,23 +320,31 @@ void bandContrast_tiltForDetector(BandContrast *bc, AFMData *afm, Quaternion qTi
  */
 void bandContrast_prepAFMForDetector(AFMData *afm, double *avgZ, Vector3 *afmCOM){
     int row, col;
+    // preset value to find the smallest z value in the data, so that atleast one z value will be smaller than this value
     double minZ = 1000000;
+    // setting this value to zero since it will be used for the total of the z values first and then to hold the average of the z values
     *avgZ = 0;
     // Prep afm
+    // going through the data and finding the min z value and keeping track of the total of the z values in the data
     for(row = 0; row < afm->xResolution; row++){
         for(col = 0; col < afm->yResolution; col++){
+            // adding for the calculating of the average later
             *avgZ += afm->zValues[row][col];
+            // comparing the current value to the minZ and replacing it if it smaller
             minZ = minZ < afm->zValues[row][col] ? minZ : afm->zValues[row][col];
         }
     }
+    // calculating the average of the z values by diving the total number of pixels by the total
     *avgZ /= (double)(afm->xResolution * afm->yResolution);
+    // when we decrease everything by minz, we also need to adjust the average since it will also decrease by minZ
     *avgZ -= minZ;
+    // reducing all the values of the data by the minimum that they have, so that the lowest value in the data is zero
     for(row = 0; row < afm->xResolution; row++){
         for(col = 0; col < afm->yResolution; col++){
             afm->zValues[row][col] -= minZ;
         }
     }
-
+    // creating a new vector with the x being half of x-resolution and the y being half of the y-resolution and the z component being the average of the z values
     *afmCOM = vector3_new(afm->xResolution / 2.0, afm->yResolution / 2.0, *avgZ);
 }
 
@@ -344,6 +361,7 @@ Quaternion bandContrast_tiltFromThetaPhi(double theta, double phi){
     Vector3 negXAxis;
     Quaternion q70, qY, qX, qTilt;
 
+    // If the phi angle is more than or equal to pi, the theta value is negated
     xTheta = (phi >= M_PI) ? -theta : theta;
 
     negXAxis = vector3_new(-1.0,0.0,0.0);
