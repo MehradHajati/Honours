@@ -211,7 +211,7 @@ BandContrast *simulateBandContrast(Facets *facets, AFMData *afm, Vector3 light, 
     printf("normalizing iVis...\n");
     fflush(stdout);
     // the greyscale for the detector view has been created randomIters times, so we need to divide each pixel value by randomIters to get the average
-    // why does it do squared value?
+    // why does it do squared value ?
     for(i = 0; i < bcs[iVis].nrow; i++){
         for(j = 0; j < bcs[iVis].ncol; j++){
             bcs[iVis].greyScale[i][j] = (bcs[iVis].greyScale[i][j]*bcs[iVis].greyScale[i][j]) / (double)(randomIters * randomIters);
