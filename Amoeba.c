@@ -5,9 +5,11 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     double **p, *y;  // initial gueess as simplex corners
     int nfunk, row, col, ndim;
 
+    // making sure that the input of user is within reason
     if(fitLevel < 1) fitLevel = 1;
     else if(fitLevel > 6) fitLevel = 6;
 
+    // creating the array which will hold the values, i think
     p = constructP(asbs, fitLevel);
     ndim = fitLevel * 2;
     y = (double*)malloc(sizeof(double) * (ndim));
@@ -181,6 +183,13 @@ double amotry(double **p, double *y, double *psum,int ndim, double (*funk)(), in
 
 }
 
+/**
+ * @brief 
+ * 
+ * @param p 
+ * @param y 
+ * @param ndim 
+ */
 void printSimplex(double **p, double *y, int ndim){    
     int row, col;
 
@@ -194,12 +203,21 @@ void printSimplex(double **p, double *y, int ndim){
     }
 }
 
+/**
+ * @brief 
+ * 
+ * @param asbs 
+ * @param fitLevel 
+ * @return double** 
+ */
 double **constructP(double *asbs[], int fitLevel){
     int row, col;
     int ndim = fitLevel * 2;
 
+    // creating a 2d double array
     double **p = (double**)malloc(sizeof(double) * (ndim + 1));
 
+    // creating 1d arrays in the indices of the 2d array created above
     for(row = 0; row < ndim + 1; row++){
         p[row] = (double*)malloc(sizeof(double) * ndim);
     }
