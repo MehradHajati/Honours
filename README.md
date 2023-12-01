@@ -1,6 +1,8 @@
+This is a test to show Ralf how to use GitHub
+
 # Band Contrast Sim
 
-This program simulates band contrast images based on AFM data. Once simulated, a mapping between the measured band contrast and the simulated band contrast is created.
+This program simulates band contrast images based on AFM data. Once simulated, a mapping between the measured band contrast and the simulated band contrast is created
 
 ## To Compile
 
