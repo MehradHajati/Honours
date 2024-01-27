@@ -16,7 +16,7 @@ def styblinski_tang(pos):
 #res = minimize(rosen, x0, method='nelder-mead', options={'xatol': 1e-8, 'disp': True})
 
 
-bounds = Bounds([-4., -4.], [4., 4.])
+bounds = [[-4, 4], [-4, 4]]
 #result = direct(rosen, bounds)
 
 
@@ -25,3 +25,5 @@ print(result.x, result.fun, result.nfev)
 
 #print(res.x)
 #print(result.x)
+
+print(styblinski_tang([1,1]))
