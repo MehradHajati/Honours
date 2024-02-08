@@ -70,6 +70,7 @@ double amoeba_chisq(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilte
     *bcAFMmOut = bandContrastAFMMapper_map(bcMeasured, afm, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5); // Scales set to 1
     bandContrast_scaleTo255(&bcAFMmOut->map[GREYSCALE_LAYER], bcAFMmOut->nrow, bcAFMmOut->ncol);
 
+    // objective function is here
     for(row = 0; row < bcAFMmOut->nrow; row++){
         for(col = 0; col < bcAFMmOut->ncol; col++){
             if(bcAFMmOut->map[GREYSCALE_LAYER][row][col] < GREYSCALE_DEFAULT * 255.0){ // Transparency
