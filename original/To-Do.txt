@@ -1,0 +1,26 @@
+- get amoeba.c.sawyer (with amoeba.h.sawyer) to run on the mac
+
+- File DNE: Currently not checking if files are missing before attempting to read them (afm, measured band contrast, theta and phi maps).
+
+- Measured band contrast text files are currently being made with the R Code. Ideally, this program could take the BandContrast.tiff file and use that instead of the R code's output. That would make this program self contained but tiffs are hard to parse.
+
+- Invalid input: 
+a) Currently only checking that the **number** of command line arguments are correct, not if they are actually valid input.
+
+b) Currently not validating user input during mapping.
+
+- Tilting Amoeba: Eventually, amoeba could be used to update the tilt axis and angle to achieve a better fit.
+
+- File names: File names are currently (mainly) located where they are used. Placing them at the top of BandContrastSim.c with "rootDir" would be convenient.
+
+- Smarter default coefficient: Currently, the defaults place the measured image in the middle of the simulated image without scaling. Other linear terms are set to 1/a0 or 1/b0 and quadratic terms are set to 1/a0^2 or 1/b0^2.
+
+- Binned afm data: Read the binned afm data instead of the regular afm data. Speeds up startup. (would need to update facets_compute call in BandContrastSim.c to not bin again)
+
+- Scaling greyscales: Currently, simulated band contrasts are scaled to have the same mean as the measured. The standard deviations could be taken into account.
+
+- Replacing readLine(): Utility.c implemented the readLine() function. Replacing it with fgets would be ideal. The readLine() function, allocates space for a new char * with every call, so it must be freed frequently.
+
+- include ratio of light/detector signal in simulation as a fitting parameter
+
+- put %g for printing of quadratic polynominal coefficients (are they non-zero?)
