@@ -24,7 +24,9 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     double best[DIMENSIONS];  
 
     // creating the upper and lower bounds
-    double bounds[DIMENSIONS][2] = {{600, 640}, {3, 3.5}, {0, 0.003}, {0, 5e-6}, {0, 5e-6}, {0, 5e-6}, {630, 650}, {0, 0.003}, {2, 2.8}, {0, 5e-6}, {0, 5e-6}, {0, 5e-6}};
+    double bounds[DIMENSIONS][2] = {{600, 700}, {3.2, 3.3}, {-0.2, 0.2}, {-1e-4, 1e-4}, {-1e-4, 1e-4}, {-1e-4, 1e-4}, {610, 680}, {-0.2, 0.2}, {1, 1.3}, {-1e-4, 1e-4}, {-1e-4, 1e-4}, {-1e-4, 1e-4}};
+    //double upperBounds[DIMENSIONS] = {640, 3.5, 0.003, 5e-6, 5e-6, 5e-6, 650, 0.003, 2.8, 5e-6, 5e-6, 5e-6};
+    //double lowerBounds[DIMENSIONS] = {600, 3, 0, 0, 0, 0, 630, 0, 2, 0, 0, 0};
 
     // making sure that the input of user is within reason
     if(fitLevel < 1) fitLevel = 1;
@@ -37,7 +39,7 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
 
     printf("calling annealing\n");
 
-    simulated_annealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 100, 1, 0.01, bounds);
+    simulated_annealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 200, 20, bounds);
 
     
     /*
@@ -279,25 +281,30 @@ double **constructP(double *asbs[], int fitLevel){
  * @param new_solution The newly randomly generated solution which will be close to the current solution
  * @param bounds The bounds of the of the search space
  */
-void get_neighbor(double *current_solution, double *new_solution, double bounds[][]) {
+void get_neighbor(double *current_solution, double *new_solution) {
     for (int i = 0; i < DIMENSIONS; i++) {
         double r = (double)rand() / (double)RAND_MAX;
         double adjustment;
-        if(i == 0 || i == 6){
+        if(i == 0){
             adjustment = 10;
         }
-        else if(i == 1 || i == 8){
-            adjustment = 0.1;
+        else if(i == 6){
+            adjustment = 0.7;
+        }
+        else if(i == 1){
+            adjustment = 0.01;
+        }
+        else if(i == 8){
+            adjustment = 0.03;
         }
         else if(i == 2 || i == 7){
-            adjustment = 0.0001;
+            adjustment = 0.04;
         }
         else{
-            adjustment = 0.0000001;
+            adjustment = 0.00002;
         }
         new_solution[i] = current_solution[i] + adjustment * (r-0.5);
     }
-    checkBounds(new_solution, bounds);
 }
 
 /**
@@ -306,7 +313,7 @@ void get_neighbor(double *current_solution, double *new_solution, double bounds[
  * @param new_solution The solution given by the get_neighbor method wchich is partially random and depends on the last solution
  * @param bounds A 2d array of bounds, 12 by 2, the first column defines the lower bound and the second column defines the upper bound
  */
-void checkBounds(double* new_solution, double *bounds[]){
+void checkBounds(double *new_solution, double bounds[][2]) {
     for(int i = 0; i < DIMENSIONS; i++){
         if(new_solution[i] < bounds[i][0]){
             printf("This index %d has hit the lower bound\n",i);
@@ -320,35 +327,34 @@ void checkBounds(double* new_solution, double *bounds[]){
 }
 
 // Simulated annealing algorithm
-void simulated_annealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double start_temp, double end_temp, double cooling_rate, double *bounds[]){
+void simulated_annealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double maxIter, double cooling_rate, double bounds[][2]){
     srand(time(NULL)); // Seed the random number generator
 
-    double temp = start_temp;
+    double temp = 1;
     double current_solution[DIMENSIONS] = {640.0000, 3.2201, 0.0016, 2.44141e-06, 2.44141e-06, 2.44141e-06, 640.0000, 0.0016, 2.3988, 2.44141e-06, 2.44141e-06, 2.44141e-06};
     double new_solution[DIMENSIONS];
-    int iter = 1;
+    int iter;
 
     double current_energy = objective_function(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, current_solution);
 
-    while (temp > end_temp) {
-        printf("Current Temp is: %f\n and number of iteration is: %d", temp, iter);
-        get_neighbor(current_solution, new_solution, bounds);
+    for(iter = 1; iter < maxIter; iter++) {
+        printf("Current Temp is: %f and number of iteration is: %d\n", temp, iter);
+        get_neighbor(current_solution, new_solution);
+        checkBounds(new_solution, bounds);
         double new_energy = objective_function(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, new_solution);
 
-        // Calculate change in energy
-        double energy_change = new_energy - current_energy;
-
         // Decide if we should accept the new solution
-        if (energy_change < 0) {
+        if ( new_energy < current_energy) {
             // New solution is better, accept it
             for (int i = 0; i < DIMENSIONS; i++) {
                 current_solution[i] = new_solution[i];
             }
             current_energy = new_energy;
-        } else{
+        } else{ // New solution is worse, accept it with a probability decreasing with temp
             double r = (double)rand() / (double)RAND_MAX;
-            if (exp(-energy_change / temp) > r) {
-                // New solution is worse, accept it with a probability decreasing with temperature
+            double e = exp( (current_energy-new_energy) / temp );
+            if(e > r) {
+                
                 for (int i = 0; i < DIMENSIONS; i++) {
                     current_solution[i] = new_solution[i];
                 }
@@ -358,7 +364,6 @@ void simulated_annealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bc
 
         // Cool down
         temp = cooling_rate / log(iter + 2);
-        iter++;
     }
 
     printf("Best solution:\n");
@@ -403,15 +408,10 @@ double objective_function(BandContrast *bcMeasured, AFMData afm, BandContrast *b
         }
     }
 
-    if(overlappingPoints != 0) {
-        chiSquared /= (double)overlappingPoints;
-    }
-    else {
-        chiSquared = 99999999;
-    }
+    if(overlappingPoints != 0) chiSquared /= (double)overlappingPoints;
+    else chiSquared = 99999999;
     bandContrastAFMMapper_free(bcAFMmOut);
     printf("chi-squared is: %f\n", chiSquared);
-
     return chiSquared;
 }
 

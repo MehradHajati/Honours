@@ -43,12 +43,12 @@ void printSimplex(double **p, double *y, int ndim);
 
 double **constructP(double *asbs[], int fitLevel);
 
-void get_neighbor(double *current_solution, double *new_solution, double *bounds[]);
+void get_neighbor(double *current_solution, double *new_solution);
 
-void simulated_annealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double start_temp, double end_temp, double cooling_rate, double *bounds[]);
+void simulated_annealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double maxIter, double cooling_rate, double bounds[][2]);
 
 double objective_function(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *current_solution);
 
-void checkBounds(double *new_soliution, double *bounds[]);
+void checkBounds(double *new_soliution, double bounds[][2]);
 
 #endif // AMOEBA_H
