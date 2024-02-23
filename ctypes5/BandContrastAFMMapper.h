@@ -47,7 +47,7 @@ void bandContrastAFMMapper_free(BandContrastAFMMapper *bcAFMm);
 /// @param b4 y stretch.
 /// @param b5 y star?
 /// @return The measured band contrast mapped onto the given AFM.
-BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast *bcMeasured, AFMData afmTilted, double a0, double a1, double a2, double a3, double a4, double a5, double b0, double b1, double b2, double b3, double b4, double b5);
+BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast bcMeasured, AFMData afmTilted, double a0, double a1, double a2, double a3, double a4, double a5, double b0, double b1, double b2, double b3, double b4, double b5);
 
 /// @brief Computes chi squared.
 /// @param bcAFMm The band contrast AFM Mapper of which to get chi squared.

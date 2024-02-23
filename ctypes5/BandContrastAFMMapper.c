@@ -75,20 +75,20 @@ void bandContrastAFMMapper_free(BandContrastAFMMapper *bcAFMm){
  * @param b5 y star?
  * @return The measured band contrast mapped onto the given AFM. 
  */
-BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast *bcMeasured, AFMData afmTilted, double a0, double a1, double a2, double a3, double a4, double a5, double b0, double b1, double b2, double b3, double b4, double b5){
+BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast bcMeasured, AFMData afmTilted, double a0, double a1, double a2, double a3, double a4, double a5, double b0, double b1, double b2, double b3, double b4, double b5){
     //printf("Mapping band contrast onto AFM...\n");
     fflush(stdout);
     int row, col, i, j, newRow, newCol, midRow, midCol, fracIters = 11;
     double fraction = 0.1, colDiff, rowDiff;
 
-    midRow = bcMeasured->nrow / 2; // Y
-    midCol = bcMeasured->ncol / 2; // X
+    midRow = bcMeasured.nrow / 2; // Y
+    midCol = bcMeasured.ncol / 2; // X
     BandContrastAFMMapper bcAFMm = bandContrastAFMMapper_new(afmTilted.xResolution, afmTilted.yResolution);
 
 // NOTE: if value is GREYSCALE_DEFAULT then that pixel has not been mapped
-    for(row = 0; row < bcMeasured->nrow; row++){
+    for(row = 0; row < bcMeasured.nrow; row++){
         rowDiff = row - midRow; // y - Y
-        for(col = 0; col < bcMeasured->ncol; col++){
+        for(col = 0; col < bcMeasured.ncol; col++){
             colDiff = -(col - midCol); // x - X
             
             newCol = floor(a0 + a1*rowDiff + a2*colDiff + a3*rowDiff*rowDiff + a4*colDiff*colDiff + a5*rowDiff*colDiff + 0.5); //x from X, Y
@@ -96,7 +96,7 @@ BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast *bcMeasured, AFMDat
 
             // If within bounds and still default value:
             if(newRow >= 0 && newRow < bcAFMm.nrow && newCol >= 0 && newCol < bcAFMm.ncol && bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] == GREYSCALE_DEFAULT){
-                bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] = bcMeasured->greyScale[row][col];
+                bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] = bcMeasured.greyScale[row][col];
                 bcAFMm.map[OLD_ROW_LAYER][newRow][newCol] = row;
                 bcAFMm.map[OLD_COL_LAYER][newRow][newCol] = col;
             }
@@ -104,10 +104,10 @@ BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast *bcMeasured, AFMDat
     }
 
     // Fill fractional positions:
-    for(row = 0; row < bcMeasured->nrow; row++){
+    for(row = 0; row < bcMeasured.nrow; row++){
         for(i = 0; i < fracIters; i++){
             rowDiff = (row + fraction * i - midRow); // y - Y
-            for(col = 0; col < bcMeasured->ncol; col++){
+            for(col = 0; col < bcMeasured.ncol; col++){
                 for(j = 0; j < fracIters; j++){
                     colDiff = -(col + fraction * j - midCol); // x - X
 
@@ -116,7 +116,7 @@ BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast *bcMeasured, AFMDat
 
                     // If within bounds and still default value:
                     if(newRow >= 0 && newRow < bcAFMm.nrow && newCol >= 0 && newCol < bcAFMm.ncol && bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] == GREYSCALE_DEFAULT){
-                        bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] = bcMeasured->greyScale[row][col];
+                        bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] = bcMeasured.greyScale[row][col];
                         bcAFMm.map[OLD_ROW_LAYER][newRow][newCol] = row;
                         bcAFMm.map[OLD_COL_LAYER][newRow][newCol] = col;
                     }

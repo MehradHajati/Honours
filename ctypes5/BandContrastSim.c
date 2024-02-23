@@ -7,6 +7,8 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <limits.h>
+#include <stdio.h>
 #include "AFMDataReader.h"
 #include "AFMDataWriter.h"
 #include "Facets.h"
@@ -27,8 +29,28 @@
 
 const char *rootDir = "/Facets/samples/";
 const int requiredArgc = 7;
+int row, col, i, j, iLight = 0, iVis = 1, iLinComboA = 2; 
+//double minZ = 10000000, maxZ = -1000000, measuredOpacity = 0.75, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5;
+double minZ = 10000000, maxZ = -1000000, measuredOpacity = 0.50, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5;
+FILE *binned;
+char *binnedName;
+int binnedThere;
+AFMData afm;
+int facetTypeFlag;
+Facets facets;
+BandContrast bcMeasured; 
+double mAvg, mStdDev, mMin = DBL_MAX, mMax = DBL_MIN;
+BandContrastAFMMapper bcAFMm;
+BandContrast bcTilted, bcDifference, bcSolidOverlap, bcTransOverlap;
+double simAvg, simStdDev, simMin = DBL_MAX, simMax = DBL_MIN, val;
+Sample smpls[NUMBCS];
 
 void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, char *thetaFN, char *phiFN, char *sampleDir, double phi, double lightDeg, double width, double alpha, bool readFacets);
+void beginFunction(char *fileName, char *simOutputDir, char *measuredFN, char *thetaFN, char *phiFN, char *sampleDir, double phi, double lightDeg, double width, double alpha, bool readFacets);
+
+void writeAFMDataToFile(FILE *file, AFMData afmData);
+void writeBandContrastToFile(FILE *file, BandContrast bc);
+void writeBandContrastAFMMapperToFile(FILE *file, BandContrastAFMMapper bcm);
 
 int main(int argc, char *argv[]){
 
@@ -94,197 +116,33 @@ int main(int argc, char *argv[]){
 
 void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, char *thetaFN, char *phiFN, char *sampleDir, double phi, double lightDeg, double width, double alpha, bool readFacets){
 
-    int row, col, i, j, iLight = 0, iVis = 1, iLinComboA = 2; 
-    //double minZ = 10000000, maxZ = -1000000, measuredOpacity = 0.75, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5;
-    double minZ = 10000000, maxZ = -1000000, measuredOpacity = 0.50, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5;
-    FILE *binned;
-    char *binnedName;
-    int binnedThere;
-    AFMData afm;
-    int facetTypeFlag;
+    beginFunction(fileName, simOutputDir, measuredFN, thetaFN, phiFN, sampleDir, phi, lightDeg, width, alpha, readFacets);
 
-    // Read or compute the binned AFM data
-    // allocating the memory 
-    binnedName = (char *)malloc(sizeof(char) * MAXPATH);
-    strcpy(binnedName, fileName);
-    strcat(binnedName, "Binned");
-    printf("Looking for binned data at %s.\n", binnedName);
-    if( NULL == (binned = fopen(binnedName, "r"))) {
-        binnedThere = 0;
-        printf("No binned data found.\n");
-        afm = afmData_readFromFile(fileName);
-        // flipping the afm data across the middle row
-        afmData_flipY(&afm);
-
-        // Get min and max Z
-        for(row = 0; row < afm.xResolution; row++){
-            for(col = 0; col < afm.yResolution; col++){
-                minZ = minZ < afm.zValues[row][col] ? minZ : afm.zValues[row][col];
-                maxZ = maxZ > afm.zValues[row][col] ? maxZ : afm.zValues[row][col];
-            }
-        }
-        // Shift and scale Z values to pixels
-        for(row = 0; row < afm.xResolution; row++){
-            for(col = 0; col < afm.yResolution; col++){
-                afm.zValues[row][col] -= minZ;
-                afm.zValues[row][col] *= afm.xResolution / (double)width;
-            }
-        }
-        printf("MaxZ: %f\n", maxZ);
-        printf("MinZ: %f\n", minZ);
-        printf("MaxZ - MinZ: %f\n", maxZ - minZ);
-        printf("AFM data size is %d\n", afm.xResolution);
-        // In this while loop we are binning the afm data by a factor of 2 until its resolution is 1280 by 1280
-        while(afm.xResolution > 1280) {
-            afmData_binBy2(&afm);
-            printf("AFM data size is %d\n", afm.xResolution);
-        }
-        printf("AFM: [%d,%d]\n", afm.xResolution, afm.yResolution);
-        // now write the result to use it next time
-        fclose(binned);
-        binned = fopen(binnedName, "w");
-        // for loops to write the binned data to files
-        for(row = 0; row < afm.xResolution; row++) {
-            fprintf(binned, "%.5lf", afm.zValues[row][0]);
-            for(col = 1; col < afm.yResolution; col++) {
-                fprintf(binned, "\t%.5lf", afm.zValues[row][col]);
-            }
-            fprintf(binned,"\n");
-        }
-        fclose(binned);
-    }
-    else {
-        binnedThere = 1;
-        printf("binned is there\n");
-        afm = afmData_readFromFile(binnedName);
-    }
-    fclose(binned);
-
-    // Read or compute the facets
-    Facets facets;
-    if(readFacets) facets = facets_readFromFiles(thetaFN, phiFN);
-    // the numbers in the method below are given to us by Prof Bruening, which he found after many summers of testing and playing around with them
-    // do not change them
-    else facets = facets_compute(&afm, 3, 21, 0.001, 0);
-    printf("Facets dimensions: %dx%d\n", facets.nrow, facets.ncol);
-
-    // Read measured band contrast
-    BandContrast bcMeasured;
-    bcMeasured = bandContrast_readFromFile(measuredFN);
-    bandContrast_scaleTo255(&bcMeasured.greyScale, bcMeasured.nrow, bcMeasured.ncol);
-    double mAvg, mStdDev, mMin = DBL_MAX, mMax = DBL_MIN;
-    mAvg = bandContrast_averageGrey(&bcMeasured, 0, bcMeasured.nrow, 0, bcMeasured.ncol);
-    mStdDev = bandContrast_stdDev(&bcMeasured, 0, bcMeasured.nrow, 0, bcMeasured.ncol);
-    // here we are finding the lowest and highest values in the greyscale picture of the bandcontrast
-    for(row = 0; row < bcMeasured.nrow; row++){
-        for(col = 0; col < bcMeasured.ncol; col++){
-            // if the current pixel in the greyscale is lower than the min then replace it, if not keep mMin as mMin
-            mMin = (mMin < bcMeasured.greyScale[row][col]) ? mMin : bcMeasured.greyScale[row][col];
-            // if the current pixel in the greyscale is higher than the max then replace it, if not keep mMax as mMax
-            mMax = (mMax < bcMeasured.greyScale[row][col]) ? bcMeasured.greyScale[row][col]: mMax;
-        }
-    }
-    printf("Measured band contrast statistics: min, mean, max, stddev: %d, %f, %d, %f\n", (int)mMin, mAvg, (int)mMax, mStdDev);
-    // divding all the values of the greyscale picture in the bandcontrast objest by 255
-    for(row = 0; row < bcMeasured.nrow; row++){
-        for(col = 0; col < bcMeasured.ncol; col++){
-            bcMeasured.greyScale[row][col] = bcMeasured.greyScale[row][col] / 255.0;
-        }
-    }
-
-    // Simulate the band constrast (called "Sample")
-    printf("Starting simulation\n");
-    BandContrastAFMMapper bcAFMm;
-    double rad = (180.0 - lightDeg) * M_PI / 180.0;
-    printf("the value of M_pi is: %d\n", M_PI);
-    Vector3 light; 
-    light.x = 0; light.y = cos(rad); light.z = -sin(rad);
-    light = vector3_scale(light, 1 / vector3_magnitude(light));
-    // this is a function that does the heavy lifting
-    BandContrast *bcs = simulateBandContrast(&facets, &afm, light, alpha, &bcMeasured);  
-    printf("Simulated BC: %dx%d\n", bcs[iVis].ncol, bcs[iVis].nrow);
-    // creating the memory and places and freeing the memory for the three pictures of the simulated band contrast
-    // the first pis is the light picture which shows you what is illuminated based on the angle of the light
-    // the second pictures is the detector view which used monte carlo and tells you if the detector was a globe what would it see.
-    // the third picture is a linear combination of the two of these pictures
-    Sample smpls[NUMBCS] = {sample_new(&afm, &bcs[iLight]), sample_new(&afm, &bcs[iVis]), sample_new(&afm, &bcs[iLinComboA])};
-    for(i = 0; i < NUMBCS; i++){
-        bandContrast_free(&bcs[i]);
-    }
-    free(bcs);
-    char *bcTiltFNs[NUMBCS] = {
-        "/light.txt",
-        "/detector.txt",
-        "/BCsimulated.txt"
-    };
-    char *bcTiltPGMFNs[NUMBCS] = {
-        "/light.pgm",
-        "/detector.pgm",
-        "/BCsimulated.pgm"
-    };
-    int toTilt[NUMBCS] = {
-        iLight,
-        iVis,
-        iLinComboA
-    };
-
-    // Tilt the simulated band contrast
-    BandContrast bcTilted, bcDifference, bcSolidOverlap, bcTransOverlap;    
-    double simAvg, simStdDev, simMin = DBL_MAX, simMax = DBL_MIN, val;
-    // this for loop is used to tilt, then stretch and scale all three pictures created above
-    for(i = 0; i < NUMBCS; i++){  // NUMBCS = 3 right now
-        printf("Tilting sample %d/%d...\n", i+1, NUMBCS);
-        // tilting each of the pictures here
-        sample_tilt(&smpls[toTilt[i]], phi);
-        printf("Stretching...\n");
-        // stretching the simulated sample to fill the same area as the original data
-        sampleStretcher_stretch(&smpls[toTilt[i]],phi);
-        // creates a band contrast construct for the simulated band contrast
-        bcTilted = sample_getTiltedBandContrastFromSample(&smpls[toTilt[i]]);
-        // scaling the simulated data to 255
-        bandContrast_scaleTo255(&bcTilted.greyScale, bcTilted.nrow, bcTilted.ncol);
-        if(i != iLight) bandContrast_fillGaps(&bcTilted);
-        // calculating the average grey and standrad deviation of the simulated band contrast after it got tilted
-        simAvg = bandContrast_averageGrey(&bcTilted, 300, bcTilted.nrow - 300, 150, bcTilted.ncol - 150);
-        simStdDev = bandContrast_stdDev(&bcTilted, 300, bcTilted.nrow - 300, 150, bcTilted.ncol - 150);
-        for(row = 300; row < bcTilted.nrow - 300; row++){
-            for(col = 150; col < bcTilted.ncol - 150; col++){
-                // keeping track of the min and max and replacing them if a new one is found
-                simMin = (simMin < bcTilted.greyScale[row][col]) ? simMin : bcTilted.greyScale[row][col];
-                simMax = (simMax < bcTilted.greyScale[row][col]) ? bcTilted.greyScale[row][col] : simMax;
-            }
-        }
-        printf("%s BEFORE: min, mean, max, stddev: %d, %f, %d, %f\n",
-            bcTiltFNs[toTilt[i]], (int)simMin, simAvg, (int)simMax, simStdDev);
-
-        char *bcFNpgm = (char *)malloc(sizeof(char) * MAXPATH);
-        strcpy(bcFNpgm, simOutputDir);
-        strcat(bcFNpgm, bcTiltPGMFNs[toTilt[i]]);
-        // here we write     ../light.pgm, ../detector.pgm" and ../BCsimulated.pgm" just before deleting it all ...
-        bitmapWriter_writePGM(bcFNpgm, bcTilted.greyScale, 0, bcTilted.nrow, 0, bcTilted.ncol, true);
-        free(bcFNpgm);
-        bandContrast_free(&bcTilted);
-    }
-
+    // here is where the cut is
+    // take everything above the line and put it inot a function that can be called from python
+    
     char *input = (char *)malloc(sizeof(char) * MAXPATH);
     char *tok;
     int tokCount, fitLevel = 1;
     bool validInput;
     input[0] = '\0';
 
-    bcTilted = sample_getTiltedBandContrastFromSample(&smpls[iLinComboA]);
-    
-    bandContrast_scaleTo255(&bcTilted.greyScale, bcTilted.nrow, bcTilted.ncol);
-    bandContrast_fillGaps(&bcTilted);
-    // Simulated
-    simAvg = bandContrast_averageGrey(&bcTilted, 300, bcTilted.nrow - 300, 150, bcTilted.ncol - 150);
-    simStdDev = bandContrast_stdDev(&bcTilted, 300, bcTilted.nrow - 300, 150, bcTilted.ncol - 150);
-    for(row = 300; row < bcTilted.nrow - 300; row++){
-        for(col = 150; col < bcTilted.ncol - 150; col++){
-            simMin = (simMin < bcTilted.greyScale[row][col]) ? simMin : bcTilted.greyScale[row][col];
-            simMax = (simMax < bcTilted.greyScale[row][col]) ? bcTilted.greyScale[row][col] : simMax;
-        }
+    char cwd[200];
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        printf("Current working dir: %s\n", cwd);
     }
+
+    FILE *bcmFile = fopen("bcMeasured.txt", "w");
+    FILE *afmFile = fopen("afm.txt", "w");
+    FILE *bcTiltedFile = fopen("bcTilted.txt", "w");
+    FILE *bcAFMmFile = fopen("bcAFMm.txt", "w");
+
+    // Write each structure's details to the file
+    writeBandContrastToFile(bcmFile, bcMeasured);
+    writeAFMDataToFile(afmFile, afm);
+    writeBandContrastToFile(bcTiltedFile, bcTilted);
+    writeBandContrastAFMMapperToFile(bcAFMmFile, bcAFMm);
+    printf("\n\nprinted to files\n\n\n");
 
     a0 = afm.xResolution / 2;
     b0 = afm.yResolution / 2;
@@ -335,7 +193,7 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
             if(tok != NULL){
                 fitLevel = atoi(tok);
             }
-            runAmoeba(&bcMeasured, afm, &bcTilted, &bcAFMm, mStdDev, simStdDev, asbs, fitLevel);
+            runAmoeba(mStdDev, simStdDev, asbs, fitLevel);
         }
         else if(facetTypeFlag == 0) {
             // parse input
@@ -349,9 +207,13 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
                 tok = strtok(NULL, " ");
             }
         }
+
+        // this is the second cut encap a second fucntion here
+
+
         // run new mapping!
-        bcAFMm = bandContrastAFMMapper_map(&bcMeasured, afm, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5);
-        bandContrast_scaleTo255(&bcAFMm.map[GREYSCALE_LAYER], bcAFMm.nrow, bcAFMm.ncol);
+        bcAFMm = bandContrastAFMMapper_map(bcMeasured, afm, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5);
+        bandContrast_scaleTo255(bcAFMm.map[GREYSCALE_LAYER], bcAFMm.nrow, bcAFMm.ncol);
 
         char * bcAFMmFN = (char *)malloc(sizeof(char) * MAXPATH);
         strcpy(bcAFMmFN, simOutputDir);
@@ -521,5 +383,221 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
     bandContrast_free(&bcTilted);
     for(i = 0; i < NUMBCS; i++){
         sample_free(&smpls[i]);
+    }
+}
+
+// Function to write AFMData details
+void writeAFMDataToFile(FILE *file, AFMData afmData) {
+    fprintf(file, "%d\n", afmData.xResolution);
+    fprintf(file, "%d\n", afmData.yResolution);
+    // Assuming you want to print some of the zValues as well
+    for(int i = 0; i < afmData.xResolution; i++) {
+        for(int j = 0; j < afmData.yResolution; j++) {
+            fprintf(file, "%lf ", afmData.zValues[i][j]);
+        }
+        fprintf(file, "\n");
+    }
+}
+
+// Function to write BandContrast details
+void writeBandContrastToFile(FILE *file, BandContrast bc) {
+    fprintf(file, "%d\n", bc.nrow);
+    fprintf(file, "%d\n", bc.ncol);
+    for(int i = 0; i < bc.nrow; i++) {
+        for(int j = 0; j < bc.ncol; j++) {
+            fprintf(file, "%lf ", bc.greyScale[i][j]);
+        }
+        fprintf(file, "\n");
+    }
+}
+
+// Function to write BandContrastAFMMapper details
+void writeBandContrastAFMMapperToFile(FILE *file, BandContrastAFMMapper bcm) {
+    fprintf(file, "%d\n", bcm.nrow);
+    fprintf(file, "%d\n", bcm.ncol);
+    for(int i = 0; i < bcm.nrow; i++) {
+        for(int j = 0; j < bcm.ncol; j++) {
+            fprintf(file, "%lf ", bcm.map[GREYSCALE_DEFAULT][i][j]);
+        }
+        fprintf(file, "\n");
+    }
+}
+
+void beginFunction(char *fileName, char *simOutputDir, char *measuredFN, char *thetaFN, char *phiFN, char *sampleDir, double phi, double lightDeg, double width, double alpha, bool readFacets){
+    // Read or compute the binned AFM data
+    // allocating the memory 
+    binnedName = (char *)malloc(sizeof(char) * MAXPATH);
+    strcpy(binnedName, fileName);
+    strcat(binnedName, "Binned");
+    printf("Looking for binned data at %s.\n", binnedName);
+    if( NULL == (binned = fopen(binnedName, "r"))) {
+        binnedThere = 0;
+        printf("No binned data found.\n");
+        afm = afmData_readFromFile(fileName);
+        // flipping the afm data across the middle row
+        afmData_flipY(&afm);
+
+        // Get min and max Z
+        for(row = 0; row < afm.xResolution; row++){
+            for(col = 0; col < afm.yResolution; col++){
+                minZ = minZ < afm.zValues[row][col] ? minZ : afm.zValues[row][col];
+                maxZ = maxZ > afm.zValues[row][col] ? maxZ : afm.zValues[row][col];
+            }
+        }
+        // Shift and scale Z values to pixels
+        for(row = 0; row < afm.xResolution; row++){
+            for(col = 0; col < afm.yResolution; col++){
+                afm.zValues[row][col] -= minZ;
+                afm.zValues[row][col] *= afm.xResolution / (double)width;
+            }
+        }
+        printf("MaxZ: %f\n", maxZ);
+        printf("MinZ: %f\n", minZ);
+        printf("MaxZ - MinZ: %f\n", maxZ - minZ);
+        printf("AFM data size is %d\n", afm.xResolution);
+        // In this while loop we are binning the afm data by a factor of 2 until its resolution is 1280 by 1280
+        while(afm.xResolution > 1280) {
+            afmData_binBy2(&afm);
+            printf("AFM data size is %d\n", afm.xResolution);
+        }
+        printf("AFM: [%d,%d]\n", afm.xResolution, afm.yResolution);
+        // now write the result to use it next time
+        fclose(binned);
+        binned = fopen(binnedName, "w");
+        // for loops to write the binned data to files
+        for(row = 0; row < afm.xResolution; row++) {
+            fprintf(binned, "%.5lf", afm.zValues[row][0]);
+            for(col = 1; col < afm.yResolution; col++) {
+                fprintf(binned, "\t%.5lf", afm.zValues[row][col]);
+            }
+            fprintf(binned,"\n");
+        }
+        fclose(binned);
+    }
+    else {
+        binnedThere = 1;
+        printf("binned is there\n");
+        afm = afmData_readFromFile(binnedName);
+    }
+    fclose(binned);
+
+    // Read or compute the facets
+
+    if(readFacets) facets = facets_readFromFiles(thetaFN, phiFN);
+    // the numbers in the method below are given to us by Prof Bruening, which he found after many summers of testing and playing around with them
+    // do not change them
+    else facets = facets_compute(&afm, 3, 21, 0.001, 0);
+    printf("Facets dimensions: %dx%d\n", facets.nrow, facets.ncol);
+
+    // Read measured band contrast
+    
+    bcMeasured = bandContrast_readFromFile(measuredFN);
+    bandContrast_scaleTo255(bcMeasured.greyScale, bcMeasured.nrow, bcMeasured.ncol);
+    
+    mAvg = bandContrast_averageGrey(&bcMeasured, 0, bcMeasured.nrow, 0, bcMeasured.ncol);
+    mStdDev = bandContrast_stdDev(&bcMeasured, 0, bcMeasured.nrow, 0, bcMeasured.ncol);
+    // here we are finding the lowest and highest values in the greyscale picture of the bandcontrast
+    for(row = 0; row < bcMeasured.nrow; row++){
+        for(col = 0; col < bcMeasured.ncol; col++){
+            // if the current pixel in the greyscale is lower than the min then replace it, if not keep mMin as mMin
+            mMin = (mMin < bcMeasured.greyScale[row][col]) ? mMin : bcMeasured.greyScale[row][col];
+            // if the current pixel in the greyscale is higher than the max then replace it, if not keep mMax as mMax
+            mMax = (mMax < bcMeasured.greyScale[row][col]) ? bcMeasured.greyScale[row][col]: mMax;
+        }
+    }
+    printf("Measured band contrast statistics: min, mean, max, stddev: %d, %f, %d, %f\n", (int)mMin, mAvg, (int)mMax, mStdDev);
+    // divding all the values of the greyscale picture in the bandcontrast objest by 255
+    for(row = 0; row < bcMeasured.nrow; row++){
+        for(col = 0; col < bcMeasured.ncol; col++){
+            bcMeasured.greyScale[row][col] = bcMeasured.greyScale[row][col] / 255.0;
+        }
+    }
+
+    // Simulate the band constrast (called "Sample")
+    printf("Starting simulation\n");
+    
+    double rad = (180.0 - lightDeg) * M_PI / 180.0;
+    printf("the value of M_pi is: %d\n", M_PI);
+    Vector3 light; 
+    light.x = 0; light.y = cos(rad); light.z = -sin(rad);
+    light = vector3_scale(light, 1 / vector3_magnitude(light));
+    // this is a function that does the heavy lifting
+    BandContrast *bcs = simulateBandContrast(&facets, &afm, light, alpha, &bcMeasured);  
+    printf("Simulated BC: %dx%d\n", bcs[iVis].ncol, bcs[iVis].nrow);
+    // creating the memory and places and freeing the memory for the three pictures of the simulated band contrast
+    // the first pis is the light picture which shows you what is illuminated based on the angle of the light
+    // the second pictures is the detector view which used monte carlo and tells you if the detector was a globe what would it see.
+    // the third picture is a linear combination of the two of these pictures
+    Sample smpls[NUMBCS] = {sample_new(&afm, &bcs[iLight]), sample_new(&afm, &bcs[iVis]), sample_new(&afm, &bcs[iLinComboA])};
+    for(i = 0; i < NUMBCS; i++){
+        bandContrast_free(&bcs[i]);
+    }
+    free(bcs);
+    char *bcTiltFNs[NUMBCS] = {
+        "/light.txt",
+        "/detector.txt",
+        "/BCsimulated.txt"
+    };
+    char *bcTiltPGMFNs[NUMBCS] = {
+        "/light.pgm",
+        "/detector.pgm",
+        "/BCsimulated.pgm"
+    };
+    int toTilt[NUMBCS] = {
+        iLight,
+        iVis,
+        iLinComboA
+    };
+
+    // Tilt the simulated band contrast   
+    
+    // this for loop is used to tilt, then stretch and scale all three pictures created above
+    for(i = 0; i < NUMBCS; i++){  // NUMBCS = 3 right now
+        printf("Tilting sample %d/%d...\n", i+1, NUMBCS);
+        // tilting each of the pictures here
+        sample_tilt(&smpls[toTilt[i]], phi);
+        printf("Stretching...\n");
+        // stretching the simulated sample to fill the same area as the original data
+        sampleStretcher_stretch(&smpls[toTilt[i]],phi);
+        // creates a band contrast construct for the simulated band contrast
+        bcTilted = sample_getTiltedBandContrastFromSample(&smpls[toTilt[i]]);
+        // scaling the simulated data to 255
+        bandContrast_scaleTo255(bcTilted.greyScale, bcTilted.nrow, bcTilted.ncol);
+        if(i != iLight) bandContrast_fillGaps(&bcTilted);
+        // calculating the average grey and standrad deviation of the simulated band contrast after it got tilted
+        simAvg = bandContrast_averageGrey(&bcTilted, 300, bcTilted.nrow - 300, 150, bcTilted.ncol - 150);
+        simStdDev = bandContrast_stdDev(&bcTilted, 300, bcTilted.nrow - 300, 150, bcTilted.ncol - 150);
+        for(row = 300; row < bcTilted.nrow - 300; row++){
+            for(col = 150; col < bcTilted.ncol - 150; col++){
+                // keeping track of the min and max and replacing them if a new one is found
+                simMin = (simMin < bcTilted.greyScale[row][col]) ? simMin : bcTilted.greyScale[row][col];
+                simMax = (simMax < bcTilted.greyScale[row][col]) ? bcTilted.greyScale[row][col] : simMax;
+            }
+        }
+        printf("%s BEFORE: min, mean, max, stddev: %d, %f, %d, %f\n",
+            bcTiltFNs[toTilt[i]], (int)simMin, simAvg, (int)simMax, simStdDev);
+
+        char *bcFNpgm = (char *)malloc(sizeof(char) * MAXPATH);
+        strcpy(bcFNpgm, simOutputDir);
+        strcat(bcFNpgm, bcTiltPGMFNs[toTilt[i]]);
+        // here we write     ../light.pgm, ../detector.pgm" and ../BCsimulated.pgm" just before deleting it all ...
+        bitmapWriter_writePGM(bcFNpgm, bcTilted.greyScale, 0, bcTilted.nrow, 0, bcTilted.ncol, true);
+        free(bcFNpgm);
+        bandContrast_free(&bcTilted);
+    }
+
+
+    bcTilted = sample_getTiltedBandContrastFromSample(&smpls[iLinComboA]);
+    
+    bandContrast_scaleTo255(bcTilted.greyScale, bcTilted.nrow, bcTilted.ncol);
+    bandContrast_fillGaps(&bcTilted);
+    // Simulated
+    simAvg = bandContrast_averageGrey(&bcTilted, 300, bcTilted.nrow - 300, 150, bcTilted.ncol - 150);
+    simStdDev = bandContrast_stdDev(&bcTilted, 300, bcTilted.nrow - 300, 150, bcTilted.ncol - 150);
+    for(row = 300; row < bcTilted.nrow - 300; row++){
+        for(col = 150; col < bcTilted.ncol - 150; col++){
+            simMin = (simMin < bcTilted.greyScale[row][col]) ? simMin : bcTilted.greyScale[row][col];
+            simMax = (simMax < bcTilted.greyScale[row][col]) ? bcTilted.greyScale[row][col] : simMax;
+        }
     }
 }

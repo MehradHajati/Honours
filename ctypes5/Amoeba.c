@@ -1,7 +1,26 @@
 #include "Amoeba.h"
 
+BandContrast bcMeasuredA;
+AFMData afmA;
+BandContrast bcTiltedA;
+BandContrastAFMMapper bcAFMmOutA;
 
-void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[], int fitLevel) {
+BandContrast readBandContrast(FILE* file);
+BandContrastAFMMapper readBandContrastAFMMapper(FILE* file);
+AFMData readAFMData(FILE* file);
+
+void runAmoeba(double mStdDev, double simStdDev, double *asbs[], int fitLevel) {
+
+    FILE *bcmFileA = fopen("bcMeasured.txt", "r");
+    FILE *afmFileA = fopen("afm.txt", "r");
+    FILE *bcTiltedFileA = fopen("bcTilted.txt", "r");
+    FILE *bcAFMmFileA = fopen("bcAFMm.txt", "r");
+
+    bcMeasuredA = readBandContrast(bcmFileA);
+    afmA = readAFMData(afmFileA);
+    bcTiltedA = readBandContrast(bcTiltedFileA);
+    bcAFMmOutA =  readBandContrastAFMMapper(bcAFMmFileA);
+
     double **p, *y;  // initial gueess as simplex corners
     int nfunk, row, col, ndim;
 
@@ -14,19 +33,19 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     ndim = fitLevel * 2;
     y = (double*)malloc(sizeof(double) * (ndim));
     
-    y[0] = amoeba_chisq(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, p[0], asbs, ndim);
+    y[0] = amoeba_chisq(mStdDev, simStdDev, p[0], ndim);
 
     for(row = 1; row < ndim + 1; row++) {
         for(col = 0; col < ndim; col++) {
             p[row][col] = p[0][col];
         }
         p[row][row-1] *= LAMBDA;
-        y[row] = amoeba_chisq(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, p[row], asbs, ndim);
+        y[row] = amoeba_chisq(mStdDev, simStdDev, p[row], ndim);
     }
 
     printSimplex(p, y, ndim);
 
-    int ilo = amoeba(p,y,ndim,FTOL,amoeba_chisq,&nfunk, bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, asbs);
+    int ilo = amoeba(p,y,ndim,FTOL,amoeba_chisq,&nfunk, mStdDev, simStdDev, asbs);
 
     // update asbs
     for(row = 0; row < fitLevel; row++){
@@ -47,38 +66,67 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     free(y);
 }
 
-double amoeba_chisq(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *simplexCorner, double *asbs[], int ndim){
+double amoeba_chisq(double mStdDev, int simStdDev, double asbs[], int ndim){
+    printf("Printing the good stuff here\n");
+    printf("%d\n", mStdDev);
+    printf("%d\n", simStdDev);
+    printf("%d\n", ndim);
+    printf("the first entry is: %d\n", asbs[0]);
+    int i = 5;
+    printf("i is set to: %d\n", i);
+    FILE *bcmFileA = fopen("bcMeasured.txt", "r");
+    printf("hello\n");
+    if(bcmFileA == NULL){
+        printf("file is null\n");
+    }
+    else{
+        printf("file is not null\n");
+    }
+    fscanf(bcmFileA, "%d", i);
+    printf("%d\n", i);
+    FILE *afmFileA = fopen("afm.txt", "r");
+    FILE *bcTiltedFileA = fopen("bcTilted.txt", "r");
+    FILE *bcAFMmFileA = fopen("bcAFMm.txt", "r");
+
+    printf("here\n");
+    bcMeasuredA = readBandContrast(bcmFileA);
+    printf("here 2\n");
+    afmA = readAFMData(afmFileA);
+    bcTiltedA = readBandContrast(bcTiltedFileA);
+    bcAFMmOutA =  readBandContrastAFMMapper(bcAFMmFileA);
+
+    
     double chiSquared = 0.0, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5;
     int row, col, overlappingPoints = 0, fitLevel;
     fitLevel = ndim / 2;
 
     // Should default as and bs be current as and bs even if not fitting those parameters. YES!
-    a0 = simplexCorner[0];
-    a1 = (fitLevel >= 2 ? simplexCorner[2] : *(asbs[1]));
-    a2 = (fitLevel >= 3 ? simplexCorner[4] : *(asbs[2]));
-    a3 = (fitLevel >= 4 ? simplexCorner[6] : *(asbs[3]));
-    a4 = (fitLevel >= 5 ? simplexCorner[8] : *(asbs[4]));
-    a5 = (fitLevel == 6 ? simplexCorner[10] : *(asbs[5]));
+    a0 = asbs[0];
+    a1 = asbs[1];
+    a2 = asbs[2];
+    a3 = asbs[3];
+    a4 = asbs[4];
+    a5 = asbs[5];
     
-    b0 = simplexCorner[1];
-    b1 = (fitLevel >= 3 ? simplexCorner[5] : *(asbs[7]));
-    b2 = (fitLevel >= 2 ? simplexCorner[3] : *(asbs[8]));
-    b3 = (fitLevel >= 5 ? simplexCorner[9] : *(asbs[9]));
-    b4 = (fitLevel >= 4 ? simplexCorner[7] : *(asbs[10]));
-    b5 = (fitLevel == 6 ? simplexCorner[11] : *(asbs[11]));
+    b0 = asbs[1];
+    b1 = asbs[7];
+    b2 = asbs[8];
+    b3 = asbs[9];
+    b4 = asbs[10];
+    b5 = asbs[11];
 
     // here it is creating the mapping to be compared and find the difference
-    *bcAFMmOut = bandContrastAFMMapper_map(bcMeasured, afm, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5); // Scales set to 1
+    bcAFMmOutA = bandContrastAFMMapper_map(bcMeasuredA, afmA, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5); // Scales set to 1
     // what to about the scaling here?
-    bandContrast_scaleTo255(&bcAFMmOut->map[GREYSCALE_LAYER], bcAFMmOut->nrow, bcAFMmOut->ncol);
+    bandContrast_scaleTo255(bcAFMmOutA.map[GREYSCALE_LAYER], bcAFMmOutA.nrow, bcAFMmOutA.ncol);
 
     // objective function is here
-    for(row = 0; row < bcAFMmOut->nrow; row++){
-        for(col = 0; col < bcAFMmOut->ncol; col++){
+    for(row = 0; row < bcAFMmOutA.nrow; row++){
+        for(col = 0; col < bcAFMmOutA.ncol; col++){
             // what to do about the transparency here
-            if(bcAFMmOut->map[GREYSCALE_LAYER][row][col] < GREYSCALE_DEFAULT * 255.0){ // Transparency
+            if(bcAFMmOutA.map[GREYSCALE_LAYER][row][col] < GREYSCALE_DEFAULT * 255.0){ // Transparency
                 // Chi Squared and difference here?
-                chiSquared += (bcAFMmOut->map[GREYSCALE_LAYER][row][col] - bcTilted->greyScale[row][col]) * (bcAFMmOut->map[GREYSCALE_LAYER][row][col] - bcTilted->greyScale[row][col]) / sqrt((mStdDev*mStdDev)*(simStdDev*simStdDev));
+                chiSquared += (bcAFMmOutA.map[GREYSCALE_LAYER][row][col] - bcTiltedA.greyScale[row][col]) * (bcAFMmOutA.map[GREYSCALE_LAYER][row][col] - bcTiltedA.greyScale[row][col]) / sqrt((mStdDev*mStdDev)*(simStdDev*simStdDev));
                 overlappingPoints++;
             }
         }
@@ -86,12 +134,12 @@ double amoeba_chisq(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilte
 
     if(overlappingPoints != 0) chiSquared /= (double)overlappingPoints;
     else chiSquared = 99999999;
-    bandContrastAFMMapper_free(bcAFMmOut);
+    bandContrastAFMMapper_free(&bcAFMmOutA);
     return chiSquared;
 
 }
 
-int amoeba(double **p, double *y, int ndim, double ftol,double (*funk)(), int *nfunk, BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[]){
+int amoeba(double **p, double *y, int ndim, double ftol,double (*funk)(), int *nfunk, double mStdDev, double simStdDev, double *asbs[]){
 	int i,j,ilo,ihi,inhi,mpts=ndim+1;
 	double ytry,ysave,sum,rtol,*psum;
 
@@ -131,13 +179,13 @@ int amoeba(double **p, double *y, int ndim, double ftol,double (*funk)(), int *n
             return ilo;
 		}
         *nfunk += 2;
-		ytry = amotry(p, y, psum, ndim, funk, ihi, nfunk, -ALPHA, bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, asbs);
+		ytry = amotry(p, y, psum, ndim, funk, ihi, nfunk, -ALPHA, mStdDev, simStdDev, asbs);
 		if (ytry <= y[ilo]){
-            ytry = amotry(p, y, psum, ndim, funk, ihi, nfunk, GAMMA, bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, asbs);
+            ytry = amotry(p, y, psum, ndim, funk, ihi, nfunk, GAMMA, mStdDev, simStdDev, asbs);
         }
 		else if (ytry >= y[inhi]) {
 			ysave = y[ihi];
-			ytry = amotry(p, y, psum, ndim, funk, ihi, nfunk, BETA, bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, asbs);
+			ytry = amotry(p, y, psum, ndim, funk, ihi, nfunk, BETA, mStdDev, simStdDev, asbs);
 			if (ytry >= ysave) {
 				for (i = 0; i < mpts; i++) {
 					if (i != ilo) {
@@ -145,7 +193,7 @@ int amoeba(double **p, double *y, int ndim, double ftol,double (*funk)(), int *n
 							psum[j] = 0.5 * (p[i][j] + p[ilo][j]);
 							p[i][j] = psum[j];
 						}
-						y[i]=(*funk)(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, psum, asbs, ndim);
+						y[i]=(*funk)(bcMeasuredA, afmA, bcTiltedA, bcAFMmOutA, mStdDev, simStdDev, psum, asbs, ndim);
 					}
 				}
 				*nfunk += ndim;
@@ -164,7 +212,7 @@ int amoeba(double **p, double *y, int ndim, double ftol,double (*funk)(), int *n
     free(psum);
 }
 
-double amotry(double **p, double *y, double *psum,int ndim, double (*funk)(), int ihi, int *nfunk,double fac, BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[]){
+double amotry(double **p, double *y, double *psum,int ndim, double (*funk)(), int ihi, int *nfunk,double fac, double mStdDev, double simStdDev, double *asbs[]){
 	int col;
 	double fac1,fac2,ytry,*ptry;
 
@@ -174,7 +222,7 @@ double amotry(double **p, double *y, double *psum,int ndim, double (*funk)(), in
 	for (col = 0; col < ndim; col++) {
         ptry[col] = psum[col] * fac1 - p[ihi][col] * fac2;
     }
-	ytry = (*funk)(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, ptry, asbs, ndim);
+	ytry = (*funk)(bcMeasuredA, afmA, bcTiltedA, bcAFMmOutA, mStdDev, simStdDev, ptry, asbs, ndim);
 	if (ytry < y[ihi]) {
 		y[ihi]=ytry;
 		for (col = 0; col < ndim; col++) {
@@ -240,3 +288,57 @@ double **constructP(double *asbs[], int fitLevel){
 
     return p;
 }
+
+BandContrast readBandContrast(FILE* file) {
+
+    if(file == NULL){
+        printf("file is null\n");
+    }
+    printf("start\n");
+    int nrow, ncol;
+    
+    fscanf(file, "%d", nrow);
+    fscanf(file, "%d", ncol);
+    printf("opened files\n");
+    BandContrast newBC = bandContrast_new(nrow, ncol);
+    for(int i = 0; i < newBC.nrow; i++) {
+        for(int j = 0; j < newBC.ncol; j++) {
+            fscanf(file, "%lf", &newBC.greyScale[i][j]);
+        }
+    }
+
+    return newBC;
+}
+
+BandContrastAFMMapper readBandContrastAFMMapper(FILE* file) {
+    int nrow, ncol;
+    
+    fscanf(file, "%d", nrow);
+    fscanf(file, "%d", ncol);
+
+    BandContrastAFMMapper newMap = bandContrastAFMMapper_new(nrow, ncol);
+    for(int i = 0; i < newMap.nrow; i++) {
+        for(int j = 0; j < newMap.ncol; j++) {
+            fscanf(file, "%lf", &newMap.map[GREYSCALE_LAYER][i][j]);
+        }
+    }
+
+    return newMap;
+}
+
+AFMData readAFMData(FILE* file) {
+    int xres, yres;
+    
+    fscanf(file, "%d", xres);
+    fscanf(file, "%d", yres);
+
+    AFMData newafm = afmData_new(xres, yres);
+    for(int i = 0; i < newafm.xResolution; i++) {
+        for(int j = 0; j < newafm.yResolution; j++) {
+            fscanf(file, "%lf", &newafm.zValues[i][j]);
+        }
+    }
+
+    return newafm;
+}
+

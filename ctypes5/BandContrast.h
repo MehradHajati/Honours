@@ -90,7 +90,7 @@ double bandContrast_stdDev(BandContrast *bc, int startRow, int endRow, int start
 /// @param vals The values to scale.
 /// @param nrow The number of rows to scale.
 /// @param ncol The number of columns to scale.
-void bandContrast_scaleTo255(double ***vals, int nrow, int ncol);
+void bandContrast_scaleTo255(double **vals, int nrow, int ncol);
 
 /// @brief Flood-fills 0 values in the given band contrast.
 /// @param bc The band contraat to fill.

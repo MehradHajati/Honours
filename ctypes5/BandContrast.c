@@ -476,12 +476,12 @@ double bandContrast_stdDev(BandContrast *bc, int startRow, int endRow, int start
  * @param nrow The number of rows to scale.
  * @param ncol The number of columns to scale.
  */
-void bandContrast_scaleTo255(double ***vals, int nrow, int ncol){
+void bandContrast_scaleTo255(double **vals, int nrow, int ncol){
     int row, col;
 
     for(row = 0; row < nrow; row++){
         for(col = 0; col < ncol; col++){
-            (*vals)[row][col] = floor((*vals)[row][col] * 255 + 0.5);
+            (vals)[row][col] = floor((vals)[row][col] * 255 + 0.5);
         }
     }
 }

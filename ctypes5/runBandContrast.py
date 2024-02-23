@@ -49,4 +49,5 @@ amoeba_chisq.argtypes = [
 ]
 
 
+# change the c code to write out all the 
 

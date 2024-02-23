@@ -3,6 +3,8 @@
 
 
 #include "BandContrastAFMMapper.h"
+#include "BandContrast.h"
+#include "AFM.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,13 +20,13 @@
 
 #define GET_PSUM for (j=1;j<=ndim;j++) { for (i=1,sum=0.0;i<=mpts;i++) sum += p[i][j]; psum[j]=sum;}
 
-void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[], int fitLevel);
+void runAmoeba(double mStdDev, double simStdDev, double *asbs[], int fitLevel);
 
-double amoeba_chisq(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *simplexCorner, double *asbs[], int ndim);
+double amoeba_chisq(double mStdDev, int simStdDev, double asbs[], int ndim);
 
-int amoeba(double **p, double *y, int ndim, double ftol,double (*funk)(), int *nfunk, BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[]);
+int amoeba(double **p, double *y, int ndim, double ftol,double (*funk)(), int *nfunk, double mStdDev, double simStdDev, double *asbs[]);
 
-double amotry(double **p, double *y, double *psum,int ndim, double (*funk)(), int ihi, int *nfunk,double fac, BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[]);
+double amotry(double **p, double *y, double *psum,int ndim, double (*funk)(), int ihi, int *nfunk,double fac, double mStdDev, double simStdDev, double *asbs[]);
 
 // void nrerror(char *error_text);
 
