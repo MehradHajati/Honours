@@ -21,14 +21,6 @@
 
 void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[], int fitLevel);
 
-void runAmoeba2(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[], int fitLevel);
-
-double amoeba_chisq(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *simplexCorner, double asbs[], int ndim);
-
-int amoeba(double **p, double *y, int ndim, double ftol,double (*funk)(), int *nfunk, BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[]);
-
-double amotry(double **p, double *y, double *psum,int ndim, double (*funk)(), int ihi, int *nfunk,double fac, BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[]);
-
 // void nrerror(char *error_text);
 
 // double *vector(int nl, int nh);
@@ -38,10 +30,6 @@ double amotry(double **p, double *y, double *psum,int ndim, double (*funk)(), in
 // double **matrix(int nrl, int nrh, int ncl, int nch);
 
 // void free_matrix(double **m, int nrl, int nrh, int ncl, int nch);
-
-void printSimplex(double **p, double *y, int ndim);
-
-double **constructP(double *asbs[], int fitLevel);
 
 void getNeighbor(double *current_solution, double *new_solution);
 
