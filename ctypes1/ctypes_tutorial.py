@@ -9,7 +9,7 @@ func = clibrary.display
 
 # assigning the arg types that are passed into the function
 # need to use the types from the ctypes library which converts automatically for us
-func.argtypes = [ctypes.c_char_p, ctypes.c_int]
+func.argtypes = [ctypes.c_char_p, ctypes.c_double]
 # assiging the return type so that we can get it from the function
 func.restype = ctypes.c_char_p
 

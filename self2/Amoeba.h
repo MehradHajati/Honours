@@ -43,12 +43,16 @@ void printSimplex(double **p, double *y, int ndim);
 
 double **constructP(double *asbs[], int fitLevel);
 
-void get_neighbor(double *current_solution, double *new_solution);
+void getNeighbor(double *current_solution, double *new_solution);
 
-void simulated_annealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double maxIter, double cooling_rate, double bounds[][2]);
+void simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double cooling_rate, double bounds[][2]);
 
-double objective_function(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *current_solution);
+double objectiveFunction(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *current_solution);
 
 void checkBounds(double *new_soliution, double bounds[][2]);
+
+double randBounds(double bounds[2]);
+
+void particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2]);
 
 #endif // AMOEBA_H

@@ -5,8 +5,12 @@
 #include <time.h>
 
 #define DIMENSIONS 12 // number of parameters
-#define SWARM_SIZE 20 // number of particles in the swarm
+#define SWARM_SIZE 30 // Number of particles in the swarm
+#define MAX_ITERATIONS 200 // Maximum number of iterations
+#define PHI_P 2.05 // ratio for personal particle component
+#define PHI_S 2.05 // ratio for Social swarm component
 
+// Particle structure
 typedef struct {
     double position[DIMENSIONS];
     double velocity[DIMENSIONS];
@@ -14,9 +18,6 @@ typedef struct {
     double best_value;
 } Particle;
 
-Particle swarm[SWARM_SIZE];
-double global_best_position[DIMENSIONS];
-double global_best_value;
 
 void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[], int fitLevel) {
     double **p, *y;  // initial gueess as simplex corners
@@ -39,7 +40,7 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
 
     printf("calling annealing\n");
 
-    simulated_annealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 200, 20, bounds);
+    simulatedAnnealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 20, bounds);
 
     
     /*
@@ -281,7 +282,7 @@ double **constructP(double *asbs[], int fitLevel){
  * @param new_solution The newly randomly generated solution which will be close to the current solution
  * @param bounds The bounds of the of the search space
  */
-void get_neighbor(double *current_solution, double *new_solution) {
+void getNeighbor(double *current_solution, double *new_solution) {
     for (int i = 0; i < DIMENSIONS; i++) {
         double r = (double)rand() / (double)RAND_MAX;
         double adjustment;
@@ -327,21 +328,23 @@ void checkBounds(double *new_solution, double bounds[][2]) {
 }
 
 // Simulated annealing algorithm
-void simulated_annealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double maxIter, double cooling_rate, double bounds[][2]){
-    srand(time(NULL)); // Seed the random number generator
+void simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double cooling_rate, double bounds[][2]){
+    
+    // Seed the random number generator
+    srand(time(NULL)); 
 
     double temp = 1;
     double current_solution[DIMENSIONS] = {640.0000, 3.2201, 0.0016, 2.44141e-06, 2.44141e-06, 2.44141e-06, 640.0000, 0.0016, 2.3988, 2.44141e-06, 2.44141e-06, 2.44141e-06};
     double new_solution[DIMENSIONS];
     int iter;
 
-    double current_energy = objective_function(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, current_solution);
+    double current_energy = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, current_solution);
 
-    for(iter = 1; iter < maxIter; iter++) {
+    for(iter = 1; iter < MAX_ITERATIONS; iter++) {
         printf("Current Temp is: %f and number of iteration is: %d\n", temp, iter);
-        get_neighbor(current_solution, new_solution);
+        getNeighbor(current_solution, new_solution);
         checkBounds(new_solution, bounds);
-        double new_energy = objective_function(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, new_solution);
+        double new_energy = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, new_solution);
 
         // Decide if we should accept the new solution
         if ( new_energy < current_energy) {
@@ -354,7 +357,7 @@ void simulated_annealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bc
             double r = (double)rand() / (double)RAND_MAX;
             double e = exp( (current_energy-new_energy) / temp );
             if(e > r) {
-                
+                printf("Accepting the worst solution\n");
                 for (int i = 0; i < DIMENSIONS; i++) {
                     current_solution[i] = new_solution[i];
                 }
@@ -386,7 +389,7 @@ void simulated_annealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bc
  * @param solution variables used for the mapping
  * @return double chi squared value with the current solution vector
  */
-double objective_function(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *solution){
+double objectiveFunction(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *solution){
 
     double chiSquared = 0.0;
     int row, col, overlappingPoints = 0;
@@ -416,85 +419,120 @@ double objective_function(BandContrast *bcMeasured, AFMData afm, BandContrast *b
 }
 
 
+/**
+ * @brief Function to return random number between the upper and lower bounds
+ * 
+ * @param bounds array of size the first one is the lower bound and the second one is the upper bound
+ * @return double random value between the upper and lower bounds
+ */
+double randBounds(double bounds[2]){
+    double range = bounds[0] - bounds[1];
+    double div = RAND_MAX / range;
+    return bounds[1] + ( (double)rand() / div);
+}
 
-/* Initialize particles in the swarm
-void initialize_swarm() {
-    for (int i = 0; i < SWARM_SIZE; i++) {
-        for (int j = 0; j < DIMENSIONS; j++) {
-            swarm[i].position[j] = ((double)rand() / RAND_MAX) * 20.0 - 10.0; // Random initial position between -10 and 10
-            swarm[i].velocity[j] = ((double)rand() / RAND_MAX) - 0.5; // Random initial velocity
-            swarm[i].best_position[j] = swarm[i].position[j]; // Initial best position is the starting position
+
+/**
+ * @brief Create a Particle object
+ * 
+ * @param particle Memory locatio for the particle
+ * @param bounds upper and lower bounds of the search space
+ */
+void createParticle(Particle *particle, double bounds[][2]){
+    for (int i = 0; i < DIMENSIONS; i++) {
+        // randomly assign a value for the position of particle between the lower and upper bounds
+        particle->position[i] = randBounds(bounds[i]);
+        // randomly assign a value between -0.5 and 0.5 for the velocity of the particle
+        particle->velocity[i] = ( (double)rand() / (double)RAND_MAX) - 0.5;
+        particle->best_position[i] = particle->position[i];
+    }
+}
+
+// Update velocity and position of the particle
+void moveParticle(Particle *particle, double *global_best_position) {
+    for (int i = 0; i < DIMENSIONS; i++) {
+        double r = (double)rand() / (double)RAND_MAX;
+        double adjustment;
+        if(i == 0){
+            adjustment = 10;
         }
-        swarm[i].best_value = objective_function(swarm[i].position);
-        if (i == 0 || swarm[i].best_value < global_best_value) {
+        else if(i == 6){
+            adjustment = 0.7;
+        }
+        else if(i == 1){
+            adjustment = 0.01;
+        }
+        else if(i == 8){
+            adjustment = 0.03;
+        }
+        else if(i == 2 || i == 7){
+            adjustment = 0.04;
+        }
+        else{
+            adjustment = 0.00002;
+        }
+
+        double personal_velocity = PHI_P * adjustment * r * (particle->best_position[i] - particle->position[i]);
+        double social_velocity = PHI_S * adjustment * r * (global_best_position[i] - particle->position[i]);
+        particle->velocity[i] = personal_velocity + social_velocity;
+        particle->position[i] += particle->velocity[i];
+    }
+}
+
+// Particle Swarm Optimization algorithm
+void particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2]) {
+    
+    Particle swarm[SWARM_SIZE];
+    double global_best_value = INFINITY;
+    double global_best_position[DIMENSIONS];
+
+    // Create the particles
+    for (int i = 0; i < SWARM_SIZE; i++) {
+        createParticle(&swarm[i], bounds);
+        swarm[i].best_value = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, swarm[i].position);
+        if (swarm[i].best_value < global_best_value) {
             global_best_value = swarm[i].best_value;
             for (int j = 0; j < DIMENSIONS; j++) {
                 global_best_position[j] = swarm[i].position[j];
             }
         }
     }
-}
 
-// Update velocity and position of each particle
-void update_particles() {
-    double w = INERTIA_WEIGHT;
-    for (int i = 0; i < SWARM_SIZE; i++) {
-        for (int j = 0; j < DIMENSIONS; j++) {
-            double r_p = (double)rand() / RAND_MAX;
-            double r_g = (double)rand() / RAND_MAX;
-            swarm[i].velocity[j] = w * swarm[i].velocity[j] + 
-                                   PHI_P * r_p * (swarm[i].best_position[j] - swarm[i].position[j]) + 
-                                   PHI_G * r_g * (global_best_position[j] - swarm[i].position[j]);
-            swarm[i].position[j] += swarm[i].velocity[j];
-        }
-        double value = objective_function(swarm[i].position);
-        if (value < swarm[i].best_value) {
-            swarm[i].best_value = value;
-            for (int j = 0; j < DIMENSIONS; j++) {
-                swarm[i].best_position[j] = swarm[i].position[j];
+    // Looping until MAX Iterations is reached
+    for (int iter = 0; iter < MAX_ITERATIONS; iter++) {
+        for (int i = 0; i < SWARM_SIZE; i++) {
+
+            // Moving the current particle
+            moveParticle(&swarm[i], global_best_position);
+
+            // checking if the particle is still within the search space
+            checkBounds(swarm[i].position, bounds);
+
+            // calculating the new objective function value for the particle after moving
+            double current_value = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, swarm[i].position);
+
+            // Checking if the current objective function value is better than particle's best, if yes update best value and best position
+            if (current_value < swarm[i].best_value) {
+                swarm[i].best_value = current_value;
+                for (int j = 0; j < DIMENSIONS; j++) {
+                    swarm[i].best_position[j] = swarm[i].position[j];
+                }
             }
-            if (value < global_best_value) {
-                global_best_value = value;
+
+            // Checking if the current objective function value is better than globla best, if yes update best value and best position
+            if (current_value < global_best_value) {
+                global_best_value = current_value;
                 for (int j = 0; j < DIMENSIONS; j++) {
                     global_best_position[j] = swarm[i].position[j];
                 }
             }
         }
     }
-}
-
-/*int main() {
-    srand(time(NULL));
-    initialize_swarm();
-
-    for (int iter = 0; iter < MAX_ITERATIONS; iter++) {
-        update_particles();
-        // Optionally, decay the inertia weight to balance exploration and exploitation
-        INERTIA_WEIGHT *= INERTIA_WEIGHT_DECAY;
-    }
-
-    printf("Global best position:\n");
-    for (int i = 0; i < DIMENSIONS; i++) {
-        printf("x[%d] = %f\n", i, global_best_position[i]);
-    }
-    printf("Objective function value: %f\n", global_best_value);
-
-    return 0;
-}*/
-
-/*int main() {
-    double start_temp = 100.0;
-    double end_temp = 0.01;
-    double cooling_rate = 0.01;
-    double best_solution[DIMENSIONS];
-
-    simulated_annealing(start_temp, end_temp, cooling_rate, best_solution);
 
     printf("Best solution:\n");
-    for (int i = 0; i < DIMENSIONS; i++) {
-        printf("x[%d] = %f\n", i, best_solution[i]);
+    for (int i = 0; i < DIMENSIONS; i++){
+        printf("x[%d] = %f\n", i, global_best_position[i]);
     }
-    printf("Objective function value: %f\n", objective_function(best_solution));
+    printf("with chi squared = %f\n", global_best_value);
 
-    return 0;
-}*/
+}
