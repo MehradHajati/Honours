@@ -1,14 +1,14 @@
-#include "Amoeba.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include "testAlgo.h"
 
-#define DIMENSIONS 12 // number of parameters
+#define DIMENSIONS 2 // number of parameters
 #define SWARM_SIZE 10 // Number of particles in the swarm
-#define MAX_ITERATIONS 200 // Maximum number of iterations
-#define PHI_P 0.6 // ratio for personal particle component
-#define PHI_S 0.3 // ratio for Social swarm component
+#define MAX_ITERATIONS 10000 // Maximum number of iterations
+#define PHI_P 0.5 // ratio for personal particle component
+#define PHI_S 0.5 // ratio for Social swarm component
 
 // Particle structure
 typedef struct {
@@ -19,17 +19,17 @@ typedef struct {
 } Particle;
 
 
-void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[], int fitLevel) { 
+void main(int argc, char *argv[]) { 
 
     // creating the upper and lower bounds
-    double bounds[DIMENSIONS][2] = {{500, 800}, {3.2, 3.3}, {-0.2, 0.2}, {-1e-4, 1e-4}, {-1e-4, 1e-4}, {-1e-4, 1e-4}, {610, 680}, {-0.2, 0.2}, {1, 1.3}, {-1e-4, 1e-4}, {-1e-4, 1e-4}, {-1e-4, 1e-4}};
+    double bounds[DIMENSIONS][2] = {{-1000, 1000}, {-1000, 1000}};
     //double upperBounds[DIMENSIONS] = {640, 3.5, 0.003, 5e-6, 5e-6, 5e-6, 650, 0.003, 2.8, 5e-6, 5e-6, 5e-6};
     //double lowerBounds[DIMENSIONS] = {600, 3, 0, 0, 0, 0, 630, 0, 2, 0, 0, 0};
 
 
-    //simulatedAnnealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 20, bounds);
+    //simulatedAnnealing(5, bounds);
 
-    particleSwarm(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds);
+    particleSwarm(bounds);
 }
 
 /**
@@ -40,27 +40,11 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
  * @param bounds The bounds of the of the search space
  */
 void getNeighbor(double *current_solution, double *new_solution) {
+    // Seed the random number generator
+    srand(time(NULL)); 
     for (int i = 0; i < DIMENSIONS; i++) {
         double r = (double)rand() / (double)RAND_MAX;
-        double adjustment;
-        if(i == 0){
-            adjustment = 10;
-        }
-        else if(i == 6){
-            adjustment = 0.7;
-        }
-        else if(i == 1){
-            adjustment = 0.01;
-        }
-        else if(i == 8){
-            adjustment = 0.03;
-        }
-        else if(i == 2 || i == 7){
-            adjustment = 0.04;
-        }
-        else{
-            adjustment = 0.00002;
-        }
+        double adjustment = 10;
         new_solution[i] = current_solution[i] + adjustment * (r-0.5);
     }
 }
@@ -85,23 +69,20 @@ void checkBounds(double *new_solution, double bounds[][2]) {
 }
 
 // Simulated annealing algorithm
-void simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double cooling_rate, double bounds[][2]){
-    
-    // Seed the random number generator
-    srand(time(NULL)); 
+void simulatedAnnealing(double cooling_rate, double bounds[][2]){
 
     double temp = 1;
-    double current_solution[DIMENSIONS] = {640.0000, 3.2201, 0.0016, 2.44141e-06, 2.44141e-06, 2.44141e-06, 640.0000, 0.0016, 2.3988, 2.44141e-06, 2.44141e-06, 2.44141e-06};
+    double current_solution[DIMENSIONS] = {0, 0};
     double new_solution[DIMENSIONS];
     int iter;
 
-    double current_energy = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, current_solution);
+    double current_energy = objectiveFunction(current_solution);
 
     for(iter = 1; iter < MAX_ITERATIONS; iter++) {
-        printf("Current Temp is: %f and number of iteration is: %d\n", temp, iter);
+        printf("Current Temp is: %f and number of iteration is: %d with chi-squared: %f\n", temp, iter, current_energy);
         getNeighbor(current_solution, new_solution);
         checkBounds(new_solution, bounds);
-        double new_energy = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, new_solution);
+        double new_energy = objectiveFunction(new_solution);
 
         // Decide if we should accept the new solution
         if ( new_energy < current_energy) {
@@ -133,45 +114,9 @@ void simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcT
     printf("with chi squared = %f\n", current_energy);
 }
 
+double objectiveFunction(double *solution){
 
-/**
- * @brief Function that mimicks ameoba_chisq function but is more streamlined for our purposes
- * 
- * @param bcMeasured Band contrast data
- * @param afm AFM data
- * @param bcTilted Simulated Band Contrast data
- * @param bcAFMmOut original band contrast mapped
- * @param mStdDev Standard deviation of the measured data
- * @param simStdDev standard deviation of the simulated data
- * @param solution variables used for the mapping
- * @return double chi squared value with the current solution vector
- */
-double objectiveFunction(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *solution){
-
-    double chiSquared = 0.0;
-    int row, col, overlappingPoints = 0;
-
-    // here it is creating the mapping to be compared and find the difference
-    *bcAFMmOut = bandContrastAFMMapper_map(bcMeasured, afm, solution[0], solution[1], solution[2], solution[3], solution[4], solution[5], solution[6], solution[7], solution[8], solution[9], solution[10], solution[11]); // Scales set to 1
-    // what to about the scaling here?
-    bandContrast_scaleTo255(&bcAFMmOut->map[GREYSCALE_LAYER], bcAFMmOut->nrow, bcAFMmOut->ncol);
-
-    // objective function is here
-    for(row = 0; row < bcAFMmOut->nrow; row++){
-        for(col = 0; col < bcAFMmOut->ncol; col++){
-            // what to do about the transparency here
-            if(bcAFMmOut->map[GREYSCALE_LAYER][row][col] < GREYSCALE_DEFAULT * 255.0){ // Transparency
-                // Chi Squared and difference here?
-                chiSquared += (bcAFMmOut->map[GREYSCALE_LAYER][row][col] - bcTilted->greyScale[row][col]) * (bcAFMmOut->map[GREYSCALE_LAYER][row][col] - bcTilted->greyScale[row][col]) / sqrt((mStdDev*mStdDev)*(simStdDev*simStdDev));
-                overlappingPoints++;
-            }
-        }
-    }
-
-    if(overlappingPoints != 0) chiSquared /= (double)overlappingPoints;
-    else chiSquared = 99999999;
-    bandContrastAFMMapper_free(bcAFMmOut);
-    return chiSquared;
+    return 0.5 * (pow(solution[0], 4) - 16*pow(solution[0], 2) + 5*solution[0] + pow(solution[1], 4) - 16*pow(solution[1], 2) + 5*solution[1]);
 }
 
 
@@ -182,6 +127,8 @@ double objectiveFunction(BandContrast *bcMeasured, AFMData afm, BandContrast *bc
  * @return double random value between the upper and lower bounds
  */
 double randBounds(double bounds[2]){
+    // Seed the random number generator
+    srand(time(NULL)); 
     double range = bounds[0] - bounds[1];
     double div = RAND_MAX / range;
     return bounds[1] + ( (double)rand() / div);
@@ -195,11 +142,13 @@ double randBounds(double bounds[2]){
  * @param bounds upper and lower bounds of the search space
  */
 void createParticle(Particle *particle, double bounds[][2]){
+    // Seed the random number generator
+    srand(time(NULL)); 
     for (int i = 0; i < DIMENSIONS; i++) {
         // randomly assign a value for the position of particle between the lower and upper bounds
         particle->position[i] = randBounds(bounds[i]);
         // particle is not moving to velocity is 0
-        particle->velocity[i] = 0;
+        particle->velocity[i] = ( (double)rand() / (double)RAND_MAX) - 0.5;
         particle->best_position[i] = particle->position[i];
     }
 }
@@ -211,27 +160,11 @@ void createParticle(Particle *particle, double bounds[][2]){
  * @param global_best_position Best position found so far
  */
 void moveParticle(Particle *particle, double *global_best_position) {
+    // Seed the random number generator
+    srand(time(NULL)); 
     for (int i = 0; i < DIMENSIONS; i++) {
         double r = (double)rand() / (double)RAND_MAX;
-        double adjustment;
-        if(i == 0){
-            adjustment = 1;
-        }
-        else if(i == 6){
-            adjustment = 0.7;
-        }
-        else if(i == 1){
-            adjustment = 0.01;
-        }
-        else if(i == 8){
-            adjustment = 0.03;
-        }
-        else if(i == 2 || i == 7){
-            adjustment = 0.04;
-        }
-        else{
-            adjustment = 0.00002;
-        }
+        double adjustment = 1;
         // Calculating the personal velocity based on the best position for the particle
         double personal_velocity = PHI_P * adjustment * r * (particle->best_position[i] - particle->position[i]);
         // Calculating the social velocity based on the global best position
@@ -244,7 +177,7 @@ void moveParticle(Particle *particle, double *global_best_position) {
 }
 
 // Particle Swarm Optimization algorithm
-void particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2]) {
+void particleSwarm(double bounds[][2]) {
     
     Particle swarm[SWARM_SIZE];
     double global_best_value = INFINITY;
@@ -253,7 +186,7 @@ void particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted
     // Create the particles
     for (int i = 0; i < SWARM_SIZE; i++) {
         createParticle(&swarm[i], bounds);
-        swarm[i].best_value = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, swarm[i].position);
+        swarm[i].best_value = objectiveFunction(swarm[i].position);
         if (swarm[i].best_value < global_best_value) {
             global_best_value = swarm[i].best_value;
             for (int j = 0; j < DIMENSIONS; j++) {
@@ -273,7 +206,7 @@ void particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted
             checkBounds(swarm[i].position, bounds);
 
             // calculating the new objective function value for the particle after moving
-            double current_value = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, swarm[i].position);
+            double current_value = objectiveFunction(swarm[i].position);
 
             // Checking if the current objective function value is better than particle's best, if yes update best value and best position
             if (current_value < swarm[i].best_value) {
