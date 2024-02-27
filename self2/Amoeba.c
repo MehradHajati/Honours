@@ -5,7 +5,8 @@
 #include <time.h>
 
 #define SWARM_SIZE 100 // Number of particles in the swarm which is ten times the number of dimensions
-#define MAX_ITERATIONS 1000 // Maximum number of iterations
+#define MAX_ITERATIONS_SA 1000 // Maximum number of iterations for simulated annealing
+#define MAX_ITERATIONS_PS 100 // Maximum number of iterations for particle swarm
 #define PHI_P 0.5 // ratio for personal particle component
 #define PHI_S 0.5 // ratio for Social swarm component
 #define PHI_C 0.5 // ratio for current velocity
@@ -23,9 +24,25 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     //double upperBounds[DIMENSIONS] = {640, 3.5, 0.003, 5e-6, 5e-6, 5e-6, 650, 0.003, 2.8, 5e-6, 5e-6, 5e-6};
     //double lowerBounds[DIMENSIONS] = {600, 3, 0, 0, 0, 0, 630, 0, 2, 0, 0, 0};
 
-    simulatedAnnealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 0.1, bounds);
+    // variable to keep track of the time
+    clock_t start, end;
+    double cpu_time_used;
 
-    //particleSwarm(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds);
+    start = clock();
+    simulatedAnnealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 0.1, bounds);
+    end = clock();
+
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("SA CPU time: %f\n", cpu_time_used);
+
+
+    /*start = clock();
+    particleSwarm(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds);
+    end = clock();
+
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("PSO CPU time: %f\n", cpu_time_used);*/
+
 }
 
 /**
@@ -78,7 +95,7 @@ void simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcT
     double best = current_energy;
     double* best_solution = current_solution;
 
-    for(iter = 0; iter < MAX_ITERATIONS; iter++) {
+    for(iter = 0; iter < MAX_ITERATIONS_SA; iter++) {
 
         // Cool down
         temp = cooling_rate / log(iter + 2);
@@ -235,7 +252,7 @@ void particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted
     }
 
     // Looping until MAX Iterations is reached
-    for (int iter = 0; iter < MAX_ITERATIONS; iter++) {
+    for (int iter = 0; iter < MAX_ITERATIONS_PS; iter++) {
         for (int i = 0; i < SWARM_SIZE; i++) {
 
             // Moving the current particle
