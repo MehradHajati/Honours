@@ -5,11 +5,11 @@
 #include <time.h>
 
 #define SWARM_SIZE 100 // Number of particles in the swarm which is ten times the number of dimensions
-#define MAX_ITERATIONS_SA 1000 // Maximum number of iterations for simulated annealing
+#define MAX_ITERATIONS_SA 10000 // Maximum number of iterations for simulated annealing
 #define MAX_ITERATIONS_PS 100 // Maximum number of iterations for particle swarm
-#define PHI_P 0.5 // ratio for personal particle component
-#define PHI_S 0.5 // ratio for Social swarm component
-#define PHI_C 0.5 // ratio for current velocity
+#define PHI_P 0.05 // ratio for personal particle component
+#define PHI_S 0.05 // ratio for Social swarm component
+#define PHI_C 0.05 // ratio for current velocity
 #define stepCoeff 10 // Coefficient for the step size
 
 
@@ -36,12 +36,12 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     printf("SA CPU time: %f\n", cpu_time_used);
 
 
-    /*start = clock();
+    start = clock();
     particleSwarm(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds);
     end = clock();
 
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("PSO CPU time: %f\n", cpu_time_used);*/
+    printf("PSO CPU time: %f\n", cpu_time_used);
 
 }
 
@@ -54,9 +54,9 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
  */
 void getNeighbor(double *current_solution, double *new_solution, double bounds[][2]) {
     for (int i = 0; i < DIMENSIONS; i++) {
-        double r = (double)rand() / (double)RAND_MAX;
+        double r = ((double)rand() / (double)RAND_MAX) - 0.5;
         double stepSize = (bounds[i][1] - bounds[i][0]) / stepCoeff;
-        new_solution[i] = current_solution[i] + stepSize * (r-0.5);
+        new_solution[i] = current_solution[i] + stepSize * r;
     }
 }
 
@@ -69,14 +69,14 @@ void getNeighbor(double *current_solution, double *new_solution, double bounds[]
 void checkBounds(double *new_solution, double bounds[][2]) {
     for(int i = 0; i < DIMENSIONS; i++){
         if(new_solution[i] < bounds[i][0]){
-            printf("This index %d has hit the lower bound with value %f\n",i, new_solution[i]);
-            // bring it back within bounds and take one step towards the upper bound
-            new_solution[i] = bounds[i][0] + ((bounds[i][1] - bounds[i][0]) / stepCoeff);
+            //printf("This index %d has hit the lower bound with value %f\n",i, new_solution[i]);
+            // bring it back within bounds
+            new_solution[i] = bounds[i][0];
         }
         else if(new_solution[i] > bounds[i][1]){
-            printf("This index %d has hit the upper bound with value %f\n", i, new_solution[i]);
-            // bring it back with bounds and take one step towards the lower bound
-            new_solution[i] = bounds[i][1] - ((bounds[i][1] - bounds[i][0]) / stepCoeff);
+            //printf("This index %d has hit the upper bound with value %f\n", i, new_solution[i]);
+            // bring it back with bounds
+            new_solution[i] = bounds[i][1];
         }
     }
 }
@@ -205,8 +205,8 @@ void createParticle(Particle *particle, double bounds[][2]){
     for (int i = 0; i < DIMENSIONS; i++) {
         // randomly assign a value for the position of particle between the lower and upper bounds
         particle->position[i] = randBounds(bounds[i]);
-        // randomly aassign velocity for the particle
-        particle->velocity[i] = ( (double)rand() / (double)RAND_MAX) - 0.5;
+        // the particle is not moving the beginning so velocity is 0
+        particle->velocity[i] = 0;
         particle->best_position[i] = particle->position[i];
     }
 }
@@ -226,7 +226,7 @@ void moveParticle(Particle *particle, double *global_best_position, double bound
         // Calculating the social velocity based on the global best position
         double social_velocity = PHI_S * stepSize * r * (global_best_position[i] - particle->position[i]);
         // changing the veloctity of the particle
-        particle->velocity[i] = PHI_C * particle->velocity[i] + personal_velocity + social_velocity;
+        particle->velocity[i] = (PHI_C * particle->velocity[i]) + personal_velocity + social_velocity;
         // moving the particle
         particle->position[i] =  particle->position[i] + particle->velocity[i];
     }

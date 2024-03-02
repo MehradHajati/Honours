@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#define DIMENSIONS 12 // number of parameters
+#define DIMENSIONS 2 // number of parameters
 #define NMAX 500
 #define ALPHA 1.0
 #define BETA 0.5

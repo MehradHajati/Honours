@@ -4,8 +4,8 @@
 #include <time.h>
 #include "testAlgo.h"
 
-#define SWARM_SIZE 100 // Number of particles in the swarm
-#define MAX_ITERATIONS_SA 1000 // Maximum number of iterations for simulated annealing
+#define SWARM_SIZE 100 // Number of particles in the swarm  which is ten times the number of dimensions
+#define MAX_ITERATIONS_SA 10000 // Maximum number of iterations for simulated annealing
 #define MAX_ITERATIONS_PS 100 // Maximum number of iterations for particle swarm
 #define PHI_P 0.5 // ratio for personal particle component
 #define PHI_S 0.5 // ratio for Social swarm component
@@ -19,7 +19,9 @@ void main(int argc, char *argv[]) {
     srand(time(NULL));
     
     // creating the upper and lower bounds
-    double bounds[DIMENSIONS][2] = {{-200, 200}, {-0.25, 0.25}, {-0.3, 0.3}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-40, 40}, {-0.3, 0.3}, {-0.35, 0.35}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}};
+    //double bounds[DIMENSIONS][2] = {{-200, 200}, {-0.25, 0.25}, {-0.3, 0.3}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-40, 40}, {-0.3, 0.3}, {-0.35, 0.35}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}};
+    //double bounds[DIMENSIONS][2] = {{-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}};
+    double bounds[DIMENSIONS][2] = {{-5, 5}, {-5, 5}};
     //double upperBounds[DIMENSIONS] = {640, 3.5, 0.003, 5e-6, 5e-6, 5e-6, 650, 0.003, 2.8, 5e-6, 5e-6, 5e-6};
     //double lowerBounds[DIMENSIONS] = {600, 3, 0, 0, 0, 0, 630, 0, 2, 0, 0, 0};
 
@@ -35,12 +37,12 @@ void main(int argc, char *argv[]) {
     printf("SA CPU time: %f\n", cpu_time_used);
 
 
-    /*start = clock();
+    start = clock();
     particleSwarm(bounds);
     end = clock();
 
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("PSO CPU time: %f\n", cpu_time_used);*/
+    printf("PSO CPU time: %f\n", cpu_time_used);
 }
 
 /**
@@ -52,9 +54,9 @@ void main(int argc, char *argv[]) {
  */
 void getNeighbor(double *current_solution, double *new_solution, double bounds[][2]) {
     for (int i = 0; i < DIMENSIONS; i++) {
-        double r = (double)rand() / (double)RAND_MAX;
+        double r = ((double)rand() / (double)RAND_MAX) - 0.5;
         double stepSize = (bounds[i][1] - bounds[i][0]) / stepCoeff;
-        new_solution[i] = current_solution[i] + stepSize * (r-0.5);
+        new_solution[i] = current_solution[i] + stepSize * r;
     }
 }
 
@@ -67,14 +69,14 @@ void getNeighbor(double *current_solution, double *new_solution, double bounds[]
 void checkBounds(double *new_solution, double bounds[][2]) {
     for(int i = 0; i < DIMENSIONS; i++){
         if(new_solution[i] < bounds[i][0]){
-            printf("This index %d has hit the lower bound with value %f\n",i, new_solution[i]);
-            // bring it back within bounds and take one step towards the upper bound
-            new_solution[i] = bounds[i][0] + ((bounds[i][1] - bounds[i][0]) / stepCoeff);
+            //printf("This index %d has hit the lower bound with value %f\n",i, new_solution[i]);
+            // bring it back within bounds
+            new_solution[i] = bounds[i][0];
         }
         else if(new_solution[i] > bounds[i][1]){
-            printf("This index %d has hit the upper bound with value %f\n", i, new_solution[i]);
-            // bring it back within bounds and take one step towards the lower bound
-            new_solution[i] = bounds[i][1] - ((bounds[i][1] - bounds[i][0]) / stepCoeff);
+            //printf("This index %d has hit the upper bound with value %f\n", i, new_solution[i]);
+            // bring it back within bounds
+            new_solution[i] = bounds[i][1];
         }
     }
 }
@@ -84,7 +86,7 @@ void simulatedAnnealing(double cooling_rate, double bounds[][2]){
 
     double temp = 1;
     // creating a random solution
-    double current_solution[DIMENSIONS] = {randBounds(bounds[0]), randBounds(bounds[1]), randBounds(bounds[2]), randBounds(bounds[3]), randBounds(bounds[4]), randBounds(bounds[5]), randBounds(bounds[6]), randBounds(bounds[7]), randBounds(bounds[8]), randBounds(bounds[9]), randBounds(bounds[10]), randBounds(bounds[11])};
+    double current_solution[DIMENSIONS] = {randBounds(bounds[0]), randBounds(bounds[1])};//,randBounds(bounds[2]), randBounds(bounds[3]), randBounds(bounds[4]), randBounds(bounds[5]), randBounds(bounds[6]), randBounds(bounds[7]), randBounds(bounds[8]), randBounds(bounds[9]), randBounds(bounds[10]), randBounds(bounds[11])};
     double new_solution[DIMENSIONS];
     int iter;
 
@@ -141,8 +143,15 @@ void simulatedAnnealing(double cooling_rate, double bounds[][2]){
 double objectiveFunction(double *solution){
     //return 100 * pow( (solution[1] - pow(solution[0], 2) ), 2 ) + pow( (1-solution[0]), 2 );
     //return 0.5 * (pow(solution[0], 4) - 16*pow(solution[0], 2) + 5*solution[0] + pow(solution[1], 4) - 16*pow(solution[1], 2) + 5*solution[1]);
-    return pow(solution[0], 2) + pow(solution[1], 2) + pow(solution[2], 2) + pow(solution[3], 2) + pow(solution[4], 2) + pow(solution[5], 2) + pow(solution[6], 2) + pow(solution[7], 2) + pow(solution[8], 2) + pow(solution[9], 2) + pow(solution[10], 2) + pow(solution[11], 2);
-
+    //return pow(solution[0], 2) + pow(solution[1], 2) + pow(solution[2], 2) + pow(solution[3], 2) + pow(solution[4], 2) + pow(solution[5], 2) + pow(solution[6], 2) + pow(solution[7], 2) + pow(solution[8], 2) + pow(solution[9], 2) + pow(solution[10], 2) + pow(solution[11], 2);
+    /*double sum = 0.0;
+    for (int i = 0; i < DIMENSIONS; i++) {
+        sum += solution[i] * solution[i] * solution[i] * solution[i] - 16 * solution[i] * solution[i] + 5 * solution[i];
+    }
+    return sum / 2.0;*/
+    double x = solution[0];
+    double y = solution[1];
+    return 2*x*x - 1.05*x*x*x*x + (x*x*x*x*x*x)/6 + x*y + y*y;
 }
 
 
@@ -169,8 +178,8 @@ void createParticle(Particle *particle, double bounds[][2]){
     for (int i = 0; i < DIMENSIONS; i++) {
         // randomly assign a value for the position of particle between the lower and upper bounds
         particle->position[i] = randBounds(bounds[i]);
-        // randomly aassign velocity for the particle
-        particle->velocity[i] = ( (double)rand() / (double)RAND_MAX) - 0.5;
+        // the particle is not moving at the begginning so velocity is 0
+        particle->velocity[i] = 0;
         particle->best_position[i] = particle->position[i];
     }
 }
@@ -190,7 +199,7 @@ void moveParticle(Particle *particle, double *global_best_position, double bound
         // Calculating the social velocity based on the global best position
         double social_velocity = PHI_S * stepSize * r * (global_best_position[i] - particle->position[i]);
         // changing the veloctity of the particle
-        particle->velocity[i] = PHI_C * particle->velocity[i] + personal_velocity + social_velocity;
+        particle->velocity[i] = (PHI_C * particle->velocity[i]) + personal_velocity + social_velocity;
         // moving the particle
         particle->position[i] = particle->position[i] + particle->velocity[i];
     }
