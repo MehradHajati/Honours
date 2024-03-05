@@ -41,7 +41,7 @@ void main();
 
 void getNeighbor(double *current_solution, double *new_solution, double bounds[][2]);
 
-void simulatedAnnealing(double cooling_rate, double bounds[][2]);
+double simulatedAnnealing(double cooling_rate, double bounds[][2]);
 
 double objectiveFunction(double *current_solution);
 
@@ -49,7 +49,7 @@ void checkBounds(double *new_soliution, double bounds[][2]);
 
 double randBounds(double bounds[2]);
 
-void particleSwarm(double bounds[][2]);
+double particleSwarm(double bounds[][2]);
 
 void moveParticle(Particle *particle, double *global_best_position, double bounds[][2]);
 

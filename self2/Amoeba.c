@@ -82,7 +82,7 @@ void checkBounds(double *new_solution, double bounds[][2]) {
 }
 
 // Simulated annealing algorithm
-void simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double cooling_rate, double bounds[][2]){
+double simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double cooling_rate, double bounds[][2]){
 
     double temp = 1;
     // creating a random solution
@@ -100,9 +100,9 @@ void simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcT
         // Cool down
         temp = cooling_rate / log(iter + 2);
 
-        if(iter % 100 == 0){
+        /*if(iter % 100 == 0){
             printf("Current Temp is: %f and number of iteration is: %d with current chi-sqr %f and best chi-sqr: %f\n", temp, iter, current_energy, best);
-        }
+        }*/
         
         getNeighbor(current_solution, new_solution, bounds);
         checkBounds(new_solution, bounds);
@@ -133,11 +133,12 @@ void simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcT
         }
     }
 
-    printf("Best solution:\n");
+    return best;
+    /*printf("Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
         printf("x[%d] = %f\n", i, best_solution[i]);
     }
-    printf("with chi squared = %f\n", best);
+    printf("with chi squared = %f\n", best);*/
 }
 
 
@@ -233,7 +234,7 @@ void moveParticle(Particle *particle, double *global_best_position, double bound
 }
 
 // Particle Swarm Optimization algorithm
-void particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2]) {
+double particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2]) {
     
     Particle swarm[SWARM_SIZE];
     double global_best_value = INFINITY;
@@ -280,13 +281,14 @@ void particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted
                 }
             }
         }
-        printf("Iteration %d with chi squared = %f\n", iter, global_best_value);
+        //printf("Iteration %d with chi squared = %f\n", iter, global_best_value);
     }
 
-    printf("Best solution:\n");
+    /*printf("Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
         printf("x[%d] = %f\n", i, global_best_position[i]);
     }
-    printf("with chi squared = %f\n", global_best_value);
+    printf("with chi squared = %f\n", global_best_value);*/
+    return global_best_value;
 
 }

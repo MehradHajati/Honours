@@ -27,22 +27,35 @@ void main(int argc, char *argv[]) {
 
     // variable to keep track of the time
     clock_t start, end;
-    double cpu_time_used;
-
-    start = clock();
-    simulatedAnnealing(0.1, bounds);
-    end = clock();
-
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("SA CPU time: %f\n", cpu_time_used);
+    double sum_time_SA = 0;
+    double sum_time_PS = 0;
+    double sum_SA = 0;
+    double sum_PS = 0;
 
 
-    start = clock();
-    particleSwarm(bounds);
-    end = clock();
+    for(int i = 0; i < 10000; i++){
 
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("PSO CPU time: %f\n", cpu_time_used);
+    
+        start = clock();
+        sum_SA += simulatedAnnealing(0.1, bounds);
+        end = clock();
+
+        sum_time_SA += ((double) (end - start)) / CLOCKS_PER_SEC;
+    }
+
+    printf("For SA the total chi is: %f and time used is: %f\n", sum_SA/10000, sum_time_SA/10000);
+
+    for(int i = 0; i < 10000; i++){
+        start = clock();
+        sum_PS += particleSwarm(bounds);
+        end = clock();
+
+        sum_time_PS += ((double) (end - start)) / CLOCKS_PER_SEC;
+    }
+
+    
+    printf("For PS the total chi is: %f and time used is: %f\n", sum_PS/10000, sum_time_PS/10000);
+    
 }
 
 /**
@@ -82,7 +95,7 @@ void checkBounds(double *new_solution, double bounds[][2]) {
 }
 
 // Simulated annealing algorithm
-void simulatedAnnealing(double cooling_rate, double bounds[][2]){
+double simulatedAnnealing(double cooling_rate, double bounds[][2]){
 
     double temp = 1;
     // creating a random solution
@@ -100,9 +113,9 @@ void simulatedAnnealing(double cooling_rate, double bounds[][2]){
         // Cool down
         temp = cooling_rate / log(iter + 2);
 
-        if(iter % 100 == 0){
+        /*if(iter % 100 == 0){
             printf("Current Temp is: %f and number of iteration is: %d with current chi-sqr %f and best chi-sqr: %f\n", temp, iter, current_energy, best);
-        }
+        }*/
         
         getNeighbor(current_solution, new_solution, bounds);
         checkBounds(new_solution, bounds);
@@ -133,22 +146,26 @@ void simulatedAnnealing(double cooling_rate, double bounds[][2]){
         }
     }
 
-    printf("Best solution:\n");
+    return best;
+    /*printf("Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
         printf("x[%d] = %f\n", i, best_solution[i]);
     }
-    printf("with chi squared = %f\n", best);
+    printf("with chi squared = %f\n", best);*/
 }
 
 double objectiveFunction(double *solution){
-    //return 100 * pow( (solution[1] - pow(solution[0], 2) ), 2 ) + pow( (1-solution[0]), 2 );
-    //return 0.5 * (pow(solution[0], 4) - 16*pow(solution[0], 2) + 5*solution[0] + pow(solution[1], 4) - 16*pow(solution[1], 2) + 5*solution[1]);
+    // Squaring Function
     //return pow(solution[0], 2) + pow(solution[1], 2) + pow(solution[2], 2) + pow(solution[3], 2) + pow(solution[4], 2) + pow(solution[5], 2) + pow(solution[6], 2) + pow(solution[7], 2) + pow(solution[8], 2) + pow(solution[9], 2) + pow(solution[10], 2) + pow(solution[11], 2);
+    
+    // Styblinski Tang Function
     /*double sum = 0.0;
     for (int i = 0; i < DIMENSIONS; i++) {
         sum += solution[i] * solution[i] * solution[i] * solution[i] - 16 * solution[i] * solution[i] + 5 * solution[i];
     }
     return sum / 2.0;*/
+
+    // Three-Hump Camel Function
     double x = solution[0];
     double y = solution[1];
     return 2*x*x - 1.05*x*x*x*x + (x*x*x*x*x*x)/6 + x*y + y*y;
@@ -206,7 +223,7 @@ void moveParticle(Particle *particle, double *global_best_position, double bound
 }
 
 // Particle Swarm Optimization algorithm
-void particleSwarm(double bounds[][2]) {
+double particleSwarm(double bounds[][2]) {
     
     Particle swarm[SWARM_SIZE];
     double global_best_value = INFINITY;
@@ -253,13 +270,14 @@ void particleSwarm(double bounds[][2]) {
                 }
             }
         }
-        printf("Iteration %d with current chi squared = %f\n", iter, global_best_value);
+        //printf("Iteration %d with current chi squared = %f\n", iter, global_best_value);
     }
 
-    printf("Best solution:\n");
+    return global_best_value;
+    /*printf("Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
         printf("x[%d] = %f\n", i, global_best_position[i]);
     }
-    printf("with chi squared = %f\n", global_best_value);
+    printf("with chi squared = %f\n", global_best_value);*/
 
 }
