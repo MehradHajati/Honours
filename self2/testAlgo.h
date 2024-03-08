@@ -7,7 +7,8 @@
 #include <stdio.h>
 #include <time.h>
 
-#define DIMENSIONS 2 // number of parameters
+#define DIMENSIONS 12 // number of parameters
+#define MAX_ITERATIONS_MTH 10000 // Maximum number of iterations for metropolis hasting algorithm
 #define NMAX 500
 #define ALPHA 1.0
 #define BETA 0.5
@@ -54,5 +55,7 @@ double particleSwarm(double bounds[][2]);
 void moveParticle(Particle *particle, double *global_best_position, double bounds[][2]);
 
 void createParticle(Particle *particle, double bounds[][2]);
+
+void MetropolisHasting(double bounds[][2], double* solution, double* output);
 
 #endif // AMOEBA_H

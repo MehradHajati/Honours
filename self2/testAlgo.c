@@ -10,7 +10,7 @@
 #define PHI_P 0.5 // ratio for personal particle component
 #define PHI_S 0.5 // ratio for Social swarm component
 #define PHI_C 0.5 // ratio for current velocity
-#define stepCoeff 10 // Coefficient for the step size
+#define stepCoeff 40 // Coefficient for the step size
 
 
 void main(int argc, char *argv[]) { 
@@ -20,8 +20,8 @@ void main(int argc, char *argv[]) {
     
     // creating the upper and lower bounds
     //double bounds[DIMENSIONS][2] = {{-200, 200}, {-0.25, 0.25}, {-0.3, 0.3}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-40, 40}, {-0.3, 0.3}, {-0.35, 0.35}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}};
-    //double bounds[DIMENSIONS][2] = {{-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}};
-    double bounds[DIMENSIONS][2] = {{-5, 5}, {-5, 5}};
+    double bounds[DIMENSIONS][2] = {{-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}};
+    //double bounds[DIMENSIONS][2] = {{-5, 5}, {-5, 5}};
     //double upperBounds[DIMENSIONS] = {640, 3.5, 0.003, 5e-6, 5e-6, 5e-6, 650, 0.003, 2.8, 5e-6, 5e-6, 5e-6};
     //double lowerBounds[DIMENSIONS] = {600, 3, 0, 0, 0, 0, 630, 0, 2, 0, 0, 0};
 
@@ -33,7 +33,7 @@ void main(int argc, char *argv[]) {
     double sum_PS = 0;
 
 
-    for(int i = 0; i < 10000; i++){
+    /*for(int i = 0; i < 10000; i++){
 
     
         start = clock();
@@ -43,9 +43,9 @@ void main(int argc, char *argv[]) {
         sum_time_SA += ((double) (end - start)) / CLOCKS_PER_SEC;
     }
 
-    printf("For SA the total chi is: %f and time used is: %f\n", sum_SA/10000, sum_time_SA/10000);
+    printf("For SA the total chi is: %f and time used is: %f\n", sum_SA/10000, sum_time_SA/10000);*/
 
-    for(int i = 0; i < 10000; i++){
+    /*for(int i = 0; i < 10000; i++){
         start = clock();
         sum_PS += particleSwarm(bounds);
         end = clock();
@@ -54,8 +54,27 @@ void main(int argc, char *argv[]) {
     }
 
     
-    printf("For PS the total chi is: %f and time used is: %f\n", sum_PS/10000, sum_time_PS/10000);
+    printf("For PS the total chi is: %f and time used is: %f\n", sum_PS/10000, sum_time_PS/10000);*/
+
+    //double eg[DIMENSIONS] = {0, 0};
+    double eg[DIMENSIONS] = {-2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903};
+    //double eg[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    double meanSums[DIMENSIONS];
+    double StdSums[DIMENSIONS];
+    double output[DIMENSIONS*2];
+
+    for(int i = 0; i < 10000; i++){
+        MetropolisHasting(bounds, eg, output);
+        for(int j = 0; j < DIMENSIONS; j++){
+            meanSums[j] += output[j];
+            StdSums[j] += output[j+DIMENSIONS];
+        }
+
+    }
     
+    for(int i = 0; i < DIMENSIONS; i++){
+        printf("Index %d with Mean %f and std is: %f\n", i, meanSums[i]/10000, StdSums[i]/10000);
+    }
 }
 
 /**
@@ -146,29 +165,30 @@ double simulatedAnnealing(double cooling_rate, double bounds[][2]){
         }
     }
 
-    return best;
+    
     /*printf("Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
         printf("x[%d] = %f\n", i, best_solution[i]);
     }
     printf("with chi squared = %f\n", best);*/
+    return best;
 }
 
 double objectiveFunction(double *solution){
     // Squaring Function
-    //return pow(solution[0], 2) + pow(solution[1], 2) + pow(solution[2], 2) + pow(solution[3], 2) + pow(solution[4], 2) + pow(solution[5], 2) + pow(solution[6], 2) + pow(solution[7], 2) + pow(solution[8], 2) + pow(solution[9], 2) + pow(solution[10], 2) + pow(solution[11], 2);
+    //return (pow(solution[0], 2)) + pow(solution[1], 2) + pow(solution[2], 2) + pow(solution[3], 2) + pow(solution[4], 2) + pow(solution[5], 2) + pow(solution[6], 2) + pow(solution[7], 2) + pow(solution[8], 2) + pow(solution[9], 2) + pow(solution[10], 2) + pow(solution[11], 2);
     
     // Styblinski Tang Function
-    /*double sum = 0.0;
+    double sum = 0.0;
     for (int i = 0; i < DIMENSIONS; i++) {
         sum += solution[i] * solution[i] * solution[i] * solution[i] - 16 * solution[i] * solution[i] + 5 * solution[i];
     }
-    return sum / 2.0;*/
+    return sum / 2.0;
 
-    // Three-Hump Camel Function
+    /* Three-Hump Camel Function
     double x = solution[0];
     double y = solution[1];
-    return 2*x*x - 1.05*x*x*x*x + (x*x*x*x*x*x)/6 + x*y + y*y;
+    return 2*x*x - 1.05*x*x*x*x + (x*x*x*x*x*x)/6 + x*y + y*y;*/
 }
 
 
@@ -273,11 +293,113 @@ double particleSwarm(double bounds[][2]) {
         //printf("Iteration %d with current chi squared = %f\n", iter, global_best_value);
     }
 
-    return global_best_value;
+    
     /*printf("Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
         printf("x[%d] = %f\n", i, global_best_position[i]);
     }
     printf("with chi squared = %f\n", global_best_value);*/
+    return global_best_value;
+}
 
+
+// Metropolis-Hasting algorithm
+void MetropolisHasting(double bounds[][2], double* solution, double* output){
+
+    double temp = 1;
+    double acceptCounter = 0;
+
+    // setting the given solution as the current solution
+    double* current_solution = solution;
+    double new_solution[DIMENSIONS];
+    int iter;
+
+    // getting the current objective function value
+    double current_energy = objectiveFunction(current_solution);
+
+    // creating the arrays that will hold all the solutions value parameters and setting its first entry
+    double all_solutions[MAX_ITERATIONS_MTH+1][DIMENSIONS];
+    for(int i = 0; i < DIMENSIONS; i++){
+        all_solutions[0][i] = current_solution[i];
+    }
+
+    for(iter = 0; iter < MAX_ITERATIONS_MTH; iter++) {
+
+        /*if(iter % 100 == 0){
+            printf("number of iteration is: %d with current chi-sqr %f\n", iter, current_energy);
+        }*/
+        
+        getNeighbor(current_solution, new_solution, bounds);
+        checkBounds(new_solution, bounds);
+        double new_energy = objectiveFunction(new_solution);
+
+        // Decide if we should accept the new solution
+        if ( new_energy < current_energy) {
+            // New solution is better, accept it
+            // incrementing counter
+            acceptCounter++;
+            for (int i = 0; i < DIMENSIONS; i++) {
+                current_solution[i] = new_solution[i];
+            }
+            current_energy = new_energy;
+            
+
+        } 
+        else{ // New solution is worse, accept it with a probability decreasing with temp
+            double r = ((double)rand() / (double)RAND_MAX);
+            double e = exp( (current_energy-new_energy) / temp );
+            if(e > r) {
+                // incrementing counter
+                acceptCounter++;
+                for (int i = 0; i < DIMENSIONS; i++) {
+                    current_solution[i] = new_solution[i];
+                }
+                current_energy = new_energy;
+            } 
+        }
+
+        // placing the current solution in the all_solutions array
+        for(int i = 0; i < DIMENSIONS; i++) {
+            all_solutions[iter+1][i] = current_solution[i];
+        }
+    }    
+
+    //printf("the acceptance rate is: %f\n", 100 * acceptCounter / MAX_ITERATIONS_MTH);
+
+    double xbar[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    double xsig[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+    // calculating the mean and stds here
+    for(int i = 0; i < (MAX_ITERATIONS_MTH+1); i++){
+        double d1[DIMENSIONS];
+        double d2[DIMENSIONS];
+        double n2 = i + 2;
+
+        // d1 = x - xbar
+        for(int j = 0; j < DIMENSIONS; j++){
+            d1[j] = all_solutions[i][j] - xbar[j];
+        }
+
+        // xbar = xbar + (d1/n2)
+        for(int j = 0; j < DIMENSIONS; j++){
+            xbar[j] = xbar[j] + (d1[j] / n2);
+        }
+
+        // d2 = x - xbar
+        for(int j = 0; j < DIMENSIONS; j++){
+            d2[j] = all_solutions[i][j] - xbar[j];
+        }
+
+        // xsig = xsig + (d1*d2)
+        for(int j = 0; j < DIMENSIONS; j++){
+            xsig[j] = xsig[j] + (d1[j] * d2[j]);
+        }
+
+    }
+
+    // adding the mean and stds array to the output array
+    for (int i = 0; i < DIMENSIONS; i++){
+        output[i] = xbar[i];
+        output[i+DIMENSIONS] = sqrt(xsig[i]/MAX_ITERATIONS_MTH);
+    }
 }

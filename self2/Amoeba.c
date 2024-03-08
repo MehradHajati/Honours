@@ -11,6 +11,7 @@
 #define PHI_S 0.05 // ratio for Social swarm component
 #define PHI_C 0.05 // ratio for current velocity
 #define stepCoeff 10 // Coefficient for the step size
+#define runs 50
 
 
 
@@ -21,15 +22,17 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
 
     // creating the upper and lower bounds
     double bounds[DIMENSIONS][2] = {{400, 800}, {3.0, 3.5}, {-0.3, 0.3}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {600, 680}, {-0.3, 0.3}, {0.8, 1.5}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}};
-    //double upperBounds[DIMENSIONS] = {640, 3.5, 0.003, 5e-6, 5e-6, 5e-6, 650, 0.003, 2.8, 5e-6, 5e-6, 5e-6};
-    //double lowerBounds[DIMENSIONS] = {600, 3, 0, 0, 0, 0, 630, 0, 2, 0, 0, 0};
 
     // variable to keep track of the time
     clock_t start, end;
     double cpu_time_used;
+    double chiSA[runs];
+    double chiPS[runs];
 
     start = clock();
-    simulatedAnnealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 0.1, bounds);
+    for(int i = 0; i < runs; i++){
+        chiSA[i] = simulatedAnnealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 0.1, bounds);
+    }
     end = clock();
 
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -37,11 +40,17 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
 
 
     start = clock();
-    particleSwarm(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds);
+    for(int i = 0; i < runs; i++){
+        chiPS[i] = particleSwarm(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds);
+    }
+    
     end = clock();
 
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("PSO CPU time: %f\n", cpu_time_used);
+
+    double answer[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    MetropolisHasting(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds, answer);
 
 }
 
@@ -59,6 +68,7 @@ void getNeighbor(double *current_solution, double *new_solution, double bounds[]
         new_solution[i] = current_solution[i] + stepSize * r;
     }
 }
+
 
 /**
  * @brief Method to check if the newly/randomly generated solution is within the bounds
@@ -80,6 +90,7 @@ void checkBounds(double *new_solution, double bounds[][2]) {
         }
     }
 }
+
 
 // Simulated annealing algorithm
 double simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double cooling_rate, double bounds[][2]){
@@ -133,12 +144,12 @@ double simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *b
         }
     }
 
-    return best;
-    /*printf("Best solution:\n");
+    printf("Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
         printf("x[%d] = %f\n", i, best_solution[i]);
     }
-    printf("with chi squared = %f\n", best);*/
+    printf("with chi squared = %f\n", best);
+    return best;
 }
 
 
@@ -212,6 +223,7 @@ void createParticle(Particle *particle, double bounds[][2]){
     }
 }
 
+
 /**
  * @brief Moves the particle to a new position
  * 
@@ -232,6 +244,7 @@ void moveParticle(Particle *particle, double *global_best_position, double bound
         particle->position[i] =  particle->position[i] + particle->velocity[i];
     }
 }
+
 
 // Particle Swarm Optimization algorithm
 double particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2]) {
@@ -284,11 +297,111 @@ double particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilt
         //printf("Iteration %d with chi squared = %f\n", iter, global_best_value);
     }
 
-    /*printf("Best solution:\n");
+    printf("Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
         printf("x[%d] = %f\n", i, global_best_position[i]);
     }
-    printf("with chi squared = %f\n", global_best_value);*/
+    printf("with chi squared = %f\n", global_best_value);
     return global_best_value;
 
+}
+
+
+// Metropolis-Hasting algorithm
+void MetropolisHasting(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2], double* solution){
+
+    double temp = 1;
+    double acceptCounter = 0;
+
+    // setting the given solution as the current solution
+    double* current_solution = solution;
+    double new_solution[DIMENSIONS];
+    int iter;
+
+    // getting the current objective function value
+    double current_energy = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, current_solution);
+
+    // creating the arrays that will hold all the solutions value parameters and setting its first entry
+    double all_solutions[MAX_ITERATIONS_MTH+1][DIMENSIONS];
+    for(int i = 0; i < DIMENSIONS; i++){
+        all_solutions[0][i] = current_solution[i];
+    }
+
+    for(iter = 0; iter < MAX_ITERATIONS_MTH; iter++) {
+
+        /*if(iter % 100 == 0){
+            printf("number of iteration is: %d with current chi-sqr %f\n", iter, current_energy);
+        }*/
+        
+        getNeighbor(current_solution, new_solution, bounds);
+        checkBounds(new_solution, bounds);
+        double new_energy = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, new_solution);
+
+        // Decide if we should accept the new solution
+        if ( new_energy < current_energy) {
+            // New solution is better, accept it
+            // incrementing counter
+            acceptCounter++;
+            for (int i = 0; i < DIMENSIONS; i++) {
+                current_solution[i] = new_solution[i];
+            }
+            current_energy = new_energy;
+            
+
+        } 
+        else{ // New solution is worse, accept it with a probability decreasing with temp
+            double r = ((double)rand() / (double)RAND_MAX);
+            double e = exp( (current_energy-new_energy) / temp );
+            if(e > r) {
+                // incrementing counter
+                acceptCounter++;
+                for (int i = 0; i < DIMENSIONS; i++) {
+                    current_solution[i] = new_solution[i];
+                }
+                current_energy = new_energy;
+            } 
+        }
+
+        // placing the current solution in the all_solutions array
+        for(int i = 0; i < DIMENSIONS; i++) {
+            all_solutions[iter+1][i] = current_solution[i];
+        }
+    }   
+
+    //printf("the acceptance rate is: %f\n", 100 * acceptCounter / MAX_ITERATIONS_MTH);
+
+    double xbar[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    double xsig[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+    // calculating the mean and stds here
+    for(int i = 0; i < (MAX_ITERATIONS_MTH+1); i++){
+        double d1[DIMENSIONS];
+        double d2[DIMENSIONS];
+        double n2 = i + 2;
+
+        // d1 = x - xbar
+        for(int j = 0; j < DIMENSIONS; j++){
+            d1[j] = all_solutions[i][j] - xbar[j];
+        }
+
+        // xbar = xbar + (d1/n2)
+        for(int j = 0; j < DIMENSIONS; j++){
+            xbar[j] = xbar[j] + (d1[j] / n2);
+        }
+
+        // d2 = x - xbar
+        for(int j = 0; j < DIMENSIONS; j++){
+            d2[j] = all_solutions[i][j] - xbar[j];
+        }
+
+        // xsig = xsig + (d1*d2)
+        for(int j = 0; j < DIMENSIONS; j++){
+            xsig[j] = xsig[j] + (d1[j] * d2[j]);
+        }
+
+    }
+
+    for(int i = 0; i < DIMENSIONS; i++){
+        printf("Index %d with Mean %f and std is: %f\n", i, xbar[i], sqrt(xsig[i]/MAX_ITERATIONS_MTH));
+    }
 }
