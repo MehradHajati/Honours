@@ -7,11 +7,11 @@
 #define SWARM_SIZE 100 // Number of particles in the swarm which is ten times the number of dimensions
 #define MAX_ITERATIONS_SA 10000 // Maximum number of iterations for simulated annealing
 #define MAX_ITERATIONS_PS 100 // Maximum number of iterations for particle swarm
-#define PHI_P 0.05 // ratio for personal particle component
-#define PHI_S 0.05 // ratio for Social swarm component
-#define PHI_C 0.05 // ratio for current velocity
+#define PHI_P 0.5 // ratio for personal particle component
+#define PHI_S 0.5 // ratio for Social swarm component
+#define PHI_C 0.5 // ratio for current velocity
 #define stepCoeff 10 // Coefficient for the step size
-#define runs 50
+#define runs 100
 
 
 
@@ -28,10 +28,13 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     double cpu_time_used;
     double chiSA[runs];
     double chiPS[runs];
+    double sumPS, sumSA;
 
     start = clock();
     for(int i = 0; i < runs; i++){
+        printf("SA Iteration %d\n", i);
         chiSA[i] = simulatedAnnealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 0.1, bounds);
+        sumSA += chiSA[i];
     }
     end = clock();
 
@@ -41,7 +44,9 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
 
     start = clock();
     for(int i = 0; i < runs; i++){
+        printf("PS Iteration %d\n", i);
         chiPS[i] = particleSwarm(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds);
+        sumPS += chiPS[i];
     }
     
     end = clock();
@@ -49,8 +54,10 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("PSO CPU time: %f\n", cpu_time_used);
 
-    double answer[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    MetropolisHasting(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds, answer);
+    printf("SA average is: %f\n", sumSA);
+    printf("PS average is: %f\n", sumPS);
+    /*double answer[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    MetropolisHasting(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds, answer);*/
 
 }
 

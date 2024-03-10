@@ -10,7 +10,7 @@
 #define PHI_P 0.5 // ratio for personal particle component
 #define PHI_S 0.5 // ratio for Social swarm component
 #define PHI_C 0.5 // ratio for current velocity
-#define stepCoeff 40 // Coefficient for the step size
+#define stepCoeff 5 // Coefficient for the step size
 
 
 void main(int argc, char *argv[]) { 
@@ -33,7 +33,7 @@ void main(int argc, char *argv[]) {
     double sum_PS = 0;
 
 
-    /*for(int i = 0; i < 10000; i++){
+    /*for(int i = 0; i < 1000; i++){
 
     
         start = clock();
@@ -43,9 +43,9 @@ void main(int argc, char *argv[]) {
         sum_time_SA += ((double) (end - start)) / CLOCKS_PER_SEC;
     }
 
-    printf("For SA the total chi is: %f and time used is: %f\n", sum_SA/10000, sum_time_SA/10000);*/
+    printf("For SA the total chi is: %f and time used is: %f\n", sum_SA/1000, sum_time_SA/1000);*/
 
-    /*for(int i = 0; i < 10000; i++){
+    for(int i = 0; i < 1; i++){
         start = clock();
         sum_PS += particleSwarm(bounds);
         end = clock();
@@ -54,11 +54,11 @@ void main(int argc, char *argv[]) {
     }
 
     
-    printf("For PS the total chi is: %f and time used is: %f\n", sum_PS/10000, sum_time_PS/10000);*/
+    printf("For PS the total chi is: %f and time used is: %f\n", sum_PS/1, sum_time_PS/1);
 
     //double eg[DIMENSIONS] = {0, 0};
-    double eg[DIMENSIONS] = {-2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903};
-    //double eg[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    //double eg[DIMENSIONS] = {-2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903};
+    /*double eg[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     double meanSums[DIMENSIONS];
     double StdSums[DIMENSIONS];
     double output[DIMENSIONS*2];
@@ -74,7 +74,7 @@ void main(int argc, char *argv[]) {
     
     for(int i = 0; i < DIMENSIONS; i++){
         printf("Index %d with Mean %f and std is: %f\n", i, meanSums[i]/10000, StdSums[i]/10000);
-    }
+    }*/
 }
 
 /**
@@ -118,7 +118,7 @@ double simulatedAnnealing(double cooling_rate, double bounds[][2]){
 
     double temp = 1;
     // creating a random solution
-    double current_solution[DIMENSIONS] = {randBounds(bounds[0]), randBounds(bounds[1])};//,randBounds(bounds[2]), randBounds(bounds[3]), randBounds(bounds[4]), randBounds(bounds[5]), randBounds(bounds[6]), randBounds(bounds[7]), randBounds(bounds[8]), randBounds(bounds[9]), randBounds(bounds[10]), randBounds(bounds[11])};
+    double current_solution[DIMENSIONS] = {randBounds(bounds[0]), randBounds(bounds[1]), randBounds(bounds[2]), randBounds(bounds[3]), randBounds(bounds[4]), randBounds(bounds[5]), randBounds(bounds[6]), randBounds(bounds[7]), randBounds(bounds[8]), randBounds(bounds[9]), randBounds(bounds[10]), randBounds(bounds[11])};
     double new_solution[DIMENSIONS];
     int iter;
 
@@ -165,7 +165,19 @@ double simulatedAnnealing(double cooling_rate, double bounds[][2]){
         }
     }
 
-    
+    /*FILE* file = fopen("SA_many.txt", "a");
+    if (file == NULL) {
+        fprintf(stderr, "Error opening file for writing\n");
+        exit(1);
+    }
+
+    for (int j = 0; j < DIMENSIONS; j++) {
+        fprintf(file, "%lf ", current_solution[j]);
+    }
+    fprintf(file, "\n");
+
+    fclose(file);*/
+
     /*printf("Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
         printf("x[%d] = %f\n", i, best_solution[i]);
@@ -178,17 +190,17 @@ double objectiveFunction(double *solution){
     // Squaring Function
     //return (pow(solution[0], 2)) + pow(solution[1], 2) + pow(solution[2], 2) + pow(solution[3], 2) + pow(solution[4], 2) + pow(solution[5], 2) + pow(solution[6], 2) + pow(solution[7], 2) + pow(solution[8], 2) + pow(solution[9], 2) + pow(solution[10], 2) + pow(solution[11], 2);
     
-    // Styblinski Tang Function
+    /* Styblinski Tang Function
     double sum = 0.0;
     for (int i = 0; i < DIMENSIONS; i++) {
         sum += solution[i] * solution[i] * solution[i] * solution[i] - 16 * solution[i] * solution[i] + 5 * solution[i];
     }
-    return sum / 2.0;
+    return sum / 2.0;*/
 
-    /* Three-Hump Camel Function
+    // Three-Hump Camel Function
     double x = solution[0];
     double y = solution[1];
-    return 2*x*x - 1.05*x*x*x*x + (x*x*x*x*x*x)/6 + x*y + y*y;*/
+    return 2*x*x - 1.05*x*x*x*x + (x*x*x*x*x*x)/6 + x*y + y*y;
 }
 
 

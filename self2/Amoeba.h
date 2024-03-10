@@ -57,6 +57,6 @@ void moveParticle(Particle *particle, double *global_best_position, double bound
 
 void createParticle(Particle *particle, double bounds[][2]);
 
-void MetropolisHasting(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2], double* solution, double* output);
+void MetropolisHasting(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2], double* solution);
 
-#endif // AMOEBA_H
+#endif //AMOEBA_H
