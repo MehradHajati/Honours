@@ -4,14 +4,14 @@
 #include <math.h>
 #include <time.h>
 
-#define SWARM_SIZE 100 // Number of particles in the swarm which is ten times the number of dimensions
+#define SWARM_SIZE 100 // Number of particles in the swarm which is approximately ten times the number of dimensions
 #define MAX_ITERATIONS_SA 10000 // Maximum number of iterations for simulated annealing
 #define MAX_ITERATIONS_PS 100 // Maximum number of iterations for particle swarm
 #define PHI_P 0.5 // ratio for personal particle component
 #define PHI_S 0.5 // ratio for Social swarm component
 #define PHI_C 0.5 // ratio for current velocity
 #define stepCoeff 10 // Coefficient for the step size
-#define runs 100
+#define runs 1
 
 
 
@@ -54,8 +54,8 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("PSO CPU time: %f\n", cpu_time_used);
 
-    printf("SA average is: %f\n", sumSA);
-    printf("PS average is: %f\n", sumPS);
+    printf("SA average is: %f\n", sumSA/runs);
+    printf("PS average is: %f\n", sumPS/runs);
     /*double answer[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     MetropolisHasting(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds, answer);*/
 
@@ -111,7 +111,11 @@ double simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *b
     double current_energy = objectiveFunction(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, current_solution);
 
     double best = current_energy;
-    double* best_solution = current_solution;
+    double best_solution[DIMENSIONS];
+
+    for(int i = 0; i < DIMENSIONS; i++){
+        best_solution[i] = current_solution[i];
+    }
 
     for(iter = 0; iter < MAX_ITERATIONS_SA; iter++) {
 
@@ -129,7 +133,9 @@ double simulatedAnnealing(BandContrast *bcMeasured, AFMData afm, BandContrast *b
         //replacing the best solution
         if(best > new_energy){
             best = new_energy;
-            best_solution = new_solution;
+            for(int i = 0; i < DIMENSIONS; i++){
+                best_solution[i] = new_solution[i];
+            }
         }
 
         // Decide if we should accept the new solution
@@ -240,11 +246,10 @@ void createParticle(Particle *particle, double bounds[][2]){
 void moveParticle(Particle *particle, double *global_best_position, double bounds[][2]) {
     for (int i = 0; i < DIMENSIONS; i++) {
         double r = (double)rand() / (double)RAND_MAX;
-        double stepSize = (bounds[i][1] - bounds[i][0]) / stepCoeff;
         // Calculating the personal velocity based on the best position for the particle
-        double personal_velocity = PHI_P * stepSize * r * (particle->best_position[i] - particle->position[i]);
+        double personal_velocity = PHI_P * r * (particle->best_position[i] - particle->position[i]);
         // Calculating the social velocity based on the global best position
-        double social_velocity = PHI_S * stepSize * r * (global_best_position[i] - particle->position[i]);
+        double social_velocity = PHI_S * r * (global_best_position[i] - particle->position[i]);
         // changing the veloctity of the particle
         particle->velocity[i] = (PHI_C * particle->velocity[i]) + personal_velocity + social_velocity;
         // moving the particle

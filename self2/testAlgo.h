@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#define DIMENSIONS 12 // number of parameters
+#define DIMENSIONS 2 // number of parameters
 #define MAX_ITERATIONS_MTH 10000 // Maximum number of iterations for metropolis hasting algorithm
 #define NMAX 500
 #define ALPHA 1.0

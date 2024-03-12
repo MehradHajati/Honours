@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <math.h>
 #include <time.h>
 #include "testAlgo.h"
 
-#define SWARM_SIZE 100 // Number of particles in the swarm  which is ten times the number of dimensions
-#define MAX_ITERATIONS_SA 10000 // Maximum number of iterations for simulated annealing
+#define SWARM_SIZE 10 // Number of particles in the swarm  which is ten times the number of dimensions
+#define MAX_ITERATIONS_SA 1000 // Maximum number of iterations for simulated annealing
 #define MAX_ITERATIONS_PS 100 // Maximum number of iterations for particle swarm
-#define PHI_P 0.5 // ratio for personal particle component
-#define PHI_S 0.5 // ratio for Social swarm component
-#define PHI_C 0.5 // ratio for current velocity
-#define stepCoeff 5 // Coefficient for the step size
+#define PHI_P 0.9 // ratio for personal particle component
+#define PHI_S 0.9 // ratio for Social swarm component
+#define PHI_C 0.9 // ratio for current velocity
+#define stepCoeff 3 // Coefficient for the step size
 
 
 void main(int argc, char *argv[]) { 
@@ -20,8 +21,8 @@ void main(int argc, char *argv[]) {
     
     // creating the upper and lower bounds
     //double bounds[DIMENSIONS][2] = {{-200, 200}, {-0.25, 0.25}, {-0.3, 0.3}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-40, 40}, {-0.3, 0.3}, {-0.35, 0.35}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}};
-    double bounds[DIMENSIONS][2] = {{-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}};
-    //double bounds[DIMENSIONS][2] = {{-5, 5}, {-5, 5}};
+    //double bounds[DIMENSIONS][2] = {{-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}, {-5, 5}};
+    double bounds[DIMENSIONS][2] = {{-5, 5}, {-5, 5}};
     //double upperBounds[DIMENSIONS] = {640, 3.5, 0.003, 5e-6, 5e-6, 5e-6, 650, 0.003, 2.8, 5e-6, 5e-6, 5e-6};
     //double lowerBounds[DIMENSIONS] = {600, 3, 0, 0, 0, 0, 630, 0, 2, 0, 0, 0};
 
@@ -33,7 +34,7 @@ void main(int argc, char *argv[]) {
     double sum_PS = 0;
 
 
-    /*for(int i = 0; i < 1000; i++){
+    /*for(int i = 0; i < 1; i++){
 
     
         start = clock();
@@ -43,9 +44,9 @@ void main(int argc, char *argv[]) {
         sum_time_SA += ((double) (end - start)) / CLOCKS_PER_SEC;
     }
 
-    printf("For SA the total chi is: %f and time used is: %f\n", sum_SA/1000, sum_time_SA/1000);*/
+    printf("For SA the total chi is: %f and time used is: %f\n", sum_SA/1, sum_time_SA/1);*/
 
-    for(int i = 0; i < 1; i++){
+    for(int i = 0; i < 20; i++){
         start = clock();
         sum_PS += particleSwarm(bounds);
         end = clock();
@@ -118,14 +119,20 @@ double simulatedAnnealing(double cooling_rate, double bounds[][2]){
 
     double temp = 1;
     // creating a random solution
-    double current_solution[DIMENSIONS] = {randBounds(bounds[0]), randBounds(bounds[1]), randBounds(bounds[2]), randBounds(bounds[3]), randBounds(bounds[4]), randBounds(bounds[5]), randBounds(bounds[6]), randBounds(bounds[7]), randBounds(bounds[8]), randBounds(bounds[9]), randBounds(bounds[10]), randBounds(bounds[11])};
+    double current_solution[DIMENSIONS] = {randBounds(bounds[0]), randBounds(bounds[1])};//, randBounds(bounds[2]), randBounds(bounds[3]), randBounds(bounds[4]), randBounds(bounds[5]), randBounds(bounds[6]), randBounds(bounds[7]), randBounds(bounds[8]), randBounds(bounds[9]), randBounds(bounds[10]), randBounds(bounds[11])};
     double new_solution[DIMENSIONS];
     int iter;
 
     double current_energy = objectiveFunction(current_solution);
 
     double best = current_energy;
-    double* best_solution = current_solution;
+    double best_solution[DIMENSIONS];
+
+    for(int i = 0; i < DIMENSIONS; i++){
+        best_solution[i] = current_solution[i];
+    }
+
+    //FILE* file = fopen("SA_one_best.txt", "w");
 
     for(iter = 0; iter < MAX_ITERATIONS_SA; iter++) {
 
@@ -143,7 +150,11 @@ double simulatedAnnealing(double cooling_rate, double bounds[][2]){
         // rplacing the best energy 
         if(best > new_energy) {
             best = new_energy;
-            best_solution = new_solution;
+            for (int i = 0; i < DIMENSIONS; i++) {
+                best_solution[i] = new_solution[i];
+                //fprintf(file, "%f ", best_solution[i]);
+            }
+            //fprintf(file, "\n");
         }
 
         // Decide if we should accept the new solution
@@ -165,14 +176,10 @@ double simulatedAnnealing(double cooling_rate, double bounds[][2]){
         }
     }
 
-    /*FILE* file = fopen("SA_many.txt", "a");
-    if (file == NULL) {
-        fprintf(stderr, "Error opening file for writing\n");
-        exit(1);
-    }
+    /*FILE* file = fopen("SA_output_best.txt", "a");
 
     for (int j = 0; j < DIMENSIONS; j++) {
-        fprintf(file, "%lf ", current_solution[j]);
+        fprintf(file, "%lf ", best_solution[j]);
     }
     fprintf(file, "\n");
 
@@ -190,14 +197,14 @@ double objectiveFunction(double *solution){
     // Squaring Function
     //return (pow(solution[0], 2)) + pow(solution[1], 2) + pow(solution[2], 2) + pow(solution[3], 2) + pow(solution[4], 2) + pow(solution[5], 2) + pow(solution[6], 2) + pow(solution[7], 2) + pow(solution[8], 2) + pow(solution[9], 2) + pow(solution[10], 2) + pow(solution[11], 2);
     
-    /* Styblinski Tang Function
+    /*Styblinski Tang Function
     double sum = 0.0;
     for (int i = 0; i < DIMENSIONS; i++) {
         sum += solution[i] * solution[i] * solution[i] * solution[i] - 16 * solution[i] * solution[i] + 5 * solution[i];
     }
     return sum / 2.0;*/
 
-    // Three-Hump Camel Function
+    //Three-Hump Camel Function
     double x = solution[0];
     double y = solution[1];
     return 2*x*x - 1.05*x*x*x*x + (x*x*x*x*x*x)/6 + x*y + y*y;
@@ -242,11 +249,10 @@ void createParticle(Particle *particle, double bounds[][2]){
 void moveParticle(Particle *particle, double *global_best_position, double bounds[][2]) {
     for (int i = 0; i < DIMENSIONS; i++) {
         double r = (double)rand() / (double)RAND_MAX;
-        double stepSize = (bounds[i][1] - bounds[i][0]) / stepCoeff;
         // Calculating the personal velocity based on the best position for the particle
-        double personal_velocity = PHI_P * stepSize * r * (particle->best_position[i] - particle->position[i]);
+        double personal_velocity = PHI_P * r * (particle->best_position[i] - particle->position[i]);
         // Calculating the social velocity based on the global best position
-        double social_velocity = PHI_S * stepSize * r * (global_best_position[i] - particle->position[i]);
+        double social_velocity = PHI_S * r * (global_best_position[i] - particle->position[i]);
         // changing the veloctity of the particle
         particle->velocity[i] = (PHI_C * particle->velocity[i]) + personal_velocity + social_velocity;
         // moving the particle
@@ -260,6 +266,23 @@ double particleSwarm(double bounds[][2]) {
     Particle swarm[SWARM_SIZE];
     double global_best_value = INFINITY;
     double global_best_position[DIMENSIONS];
+    bool flag = true;
+
+    /*FILE* file1 = fopen("PS_one_particle1.txt", "w");
+    FILE* file2 = fopen("PS_one_particle2.txt", "w");
+    FILE* file3 = fopen("PS_one_particle3.txt", "w");
+    FILE* file4 = fopen("PS_one_particle4.txt", "w");
+    FILE* file5 = fopen("PS_one_particle5.txt", "w");
+
+    FILE* file6 = fopen("PS_one_best_particle1.txt", "w");
+    FILE* file7 = fopen("PS_one_best_particle2.txt", "w");
+    FILE* file8 = fopen("PS_one_best_particle3.txt", "w");
+    FILE* file9 = fopen("PS_one_best_particle4.txt", "w");
+    FILE* file10 = fopen("PS_one_best_particle5.txt", "w");
+
+    FILE* file11 = fopen("PS_group_best.txt", "w");
+
+    FILE* file12 = fopen("PS_output.txt", "a");*/
 
     // Create the particles
     for (int i = 0; i < SWARM_SIZE; i++) {
@@ -299,18 +322,86 @@ double particleSwarm(double bounds[][2]) {
                 global_best_value = current_value;
                 for (int j = 0; j < DIMENSIONS; j++) {
                     global_best_position[j] = swarm[i].position[j];
+                    //fprintf(file11, "%lf ", global_best_position[j]);
                 }
+                //fprintf(file11, "\n");
             }
+            
+            // checking when the global best position is within the 0.25 square
+            if(abs(global_best_position[0]) < 0.25 && abs(global_best_position[1]) < 0.25 && flag) {
+                printf("iteration number is: %d\n", iter);
+                flag = false;
+            }
+
+
+            /*if(i == 1){
+                for (int j = 0; j < DIMENSIONS; j++) {
+                    fprintf(file1, "%lf ", swarm[i].position[j]);
+                    fprintf(file6, "%lf ", swarm[i].best_position[j]);
+                }
+                fprintf(file1, "\n");
+                fprintf(file6, "\n");
+            }
+            if(i == 2){
+                for (int j = 0; j < DIMENSIONS; j++) {
+                    fprintf(file2, "%lf ", swarm[i].position[j]);
+                    fprintf(file7, "%lf ", swarm[i].best_position[j]);
+                }
+                fprintf(file2, "\n");
+                fprintf(file7, "\n");
+            }
+            if(i == 3){
+                for (int j = 0; j < DIMENSIONS; j++) {
+                    fprintf(file3, "%lf ", swarm[i].position[j]);
+                    fprintf(file8, "%lf ", swarm[i].best_position[j]);
+                }
+                fprintf(file3, "\n");
+                fprintf(file8, "\n");
+            }
+            if(i == 4){
+                for (int j = 0; j < DIMENSIONS; j++) {
+                    fprintf(file4, "%lf ", swarm[i].position[j]);
+                    fprintf(file9, "%lf ", swarm[i].best_position[j]);
+                }
+                fprintf(file4, "\n");
+                fprintf(file9, "\n");
+            }
+            if(i == 5){
+                for (int j = 0; j < DIMENSIONS; j++) {
+                    fprintf(file5, "%lf ", swarm[i].position[j]);
+                    fprintf(file10, "%lf ", swarm[i].best_position[j]);
+                }
+                fprintf(file5, "\n");
+                fprintf(file10, "\n");
+            }*/
+            
         }
         //printf("Iteration %d with current chi squared = %f\n", iter, global_best_value);
     }
 
-    
+    /*for(int i = 0; i < DIMENSIONS; i++){
+        fprintf(file12, "%lf ", global_best_position[i]);
+    }
+    fprintf(file12, "\n");*/
+
     /*printf("Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
         printf("x[%d] = %f\n", i, global_best_position[i]);
     }
     printf("with chi squared = %f\n", global_best_value);*/
+    /*fclose(file1);
+    fclose(file2);
+    fclose(file3);
+    fclose(file4);
+    fclose(file5);
+    fclose(file6);
+    fclose(file7);
+    fclose(file8);
+    fclose(file9);
+    fclose(file10);
+    fclose(file11);
+    fclose(file12);*/
+    
     return global_best_value;
 }
 
@@ -378,8 +469,8 @@ void MetropolisHasting(double bounds[][2], double* solution, double* output){
 
     //printf("the acceptance rate is: %f\n", 100 * acceptCounter / MAX_ITERATIONS_MTH);
 
-    double xbar[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    double xsig[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    double xbar[DIMENSIONS] = {0, 0};//, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    double xsig[DIMENSIONS] = {0, 0};//, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     // calculating the mean and stds here
     for(int i = 0; i < (MAX_ITERATIONS_MTH+1); i++){
