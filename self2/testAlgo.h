@@ -50,7 +50,7 @@ void checkBounds(double *new_soliution, double bounds[][2]);
 
 double randBounds(double bounds[2]);
 
-double particleSwarm(double bounds[][2]);
+double particleSwarm(double bounds[][2]);//, int y, int* bestIter);
 
 void moveParticle(Particle *particle, double *global_best_position, double bounds[][2]);
 

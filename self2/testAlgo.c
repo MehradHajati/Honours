@@ -14,6 +14,7 @@
 #define stepCoeff 3 // Coefficient for the step size
 
 
+
 void main(int argc, char *argv[]) { 
 
     // Seed the random number generator
@@ -33,6 +34,15 @@ void main(int argc, char *argv[]) {
     double sum_SA = 0;
     double sum_PS = 0;
 
+    /*int bestIter[1000];
+    for(int i = 0; i < 1000; i++){
+        bestIter[i] = -10;
+    }
+
+    double sumFound;
+    int min = 100000;
+    int max = -10;
+    int failed = 0;*/
 
     /*for(int i = 0; i < 1; i++){
 
@@ -46,16 +56,33 @@ void main(int argc, char *argv[]) {
 
     printf("For SA the total chi is: %f and time used is: %f\n", sum_SA/1, sum_time_SA/1);*/
 
-    for(int i = 0; i < 20; i++){
+    for(int i = 0; i < 1000; i++){
         start = clock();
-        sum_PS += particleSwarm(bounds);
+        sum_PS += particleSwarm(bounds);//, i, bestIter);
         end = clock();
 
         sum_time_PS += ((double) (end - start)) / CLOCKS_PER_SEC;
     }
 
     
-    printf("For PS the total chi is: %f and time used is: %f\n", sum_PS/1, sum_time_PS/1);
+    printf("For PS the total chi is: %f and time used is: %f\n", sum_PS/1000, sum_time_PS/1000);
+
+    /*for(int i = 0; i < 1000; i++){
+        if(bestIter[i] == -10){
+            failed++;
+        }
+        else{
+            if(bestIter[i] < min){
+                min = bestIter[i];
+            }
+            if(bestIter[i] > max){
+                max = bestIter[i];
+            }
+            sumFound += bestIter[i];
+        }
+    }
+
+    printf("The min is: %d, mean is %f, max is:%d, and failed is %d.\n", min, sumFound/1000, max, failed);*/
 
     //double eg[DIMENSIONS] = {0, 0};
     //double eg[DIMENSIONS] = {-2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903, -2.903};
@@ -261,7 +288,7 @@ void moveParticle(Particle *particle, double *global_best_position, double bound
 }
 
 // Particle Swarm Optimization algorithm
-double particleSwarm(double bounds[][2]) {
+double particleSwarm(double bounds[][2]){//, int y, int* bestIter) {
     
     Particle swarm[SWARM_SIZE];
     double global_best_value = INFINITY;
@@ -327,11 +354,11 @@ double particleSwarm(double bounds[][2]) {
                 //fprintf(file11, "\n");
             }
             
-            // checking when the global best position is within the 0.25 square
+            /* checking when the global best position is within the 0.25 square
             if(abs(global_best_position[0]) < 0.25 && abs(global_best_position[1]) < 0.25 && flag) {
-                printf("iteration number is: %d\n", iter);
+                bestIter[y] = iter;
                 flag = false;
-            }
+            }*/
 
 
             /*if(i == 1){

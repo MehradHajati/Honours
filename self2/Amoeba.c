@@ -4,24 +4,29 @@
 #include <math.h>
 #include <time.h>
 
-#define SWARM_SIZE 100 // Number of particles in the swarm which is approximately ten times the number of dimensions
+#define SWARM_SIZE 120 // Number of particles in the swarm which is approximately ten times the number of dimensions
 #define MAX_ITERATIONS_SA 10000 // Maximum number of iterations for simulated annealing
 #define MAX_ITERATIONS_PS 100 // Maximum number of iterations for particle swarm
 #define PHI_P 0.5 // ratio for personal particle component
 #define PHI_S 0.5 // ratio for Social swarm component
 #define PHI_C 0.5 // ratio for current velocity
 #define stepCoeff 10 // Coefficient for the step size
-#define runs 1
+#define runs 10
 
 
 
 void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *asbs[], int fitLevel) { 
 
+    FILE *file = fopen("results.txt", "w");
+    if (file == NULL) {
+        // If file cannot be opened, print an error message
+        printf("Error opening file!\n");
+    }
     // Seed the random number generator
     srand(time(NULL));
 
     // creating the upper and lower bounds
-    double bounds[DIMENSIONS][2] = {{400, 800}, {3.0, 3.5}, {-0.3, 0.3}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {600, 680}, {-0.3, 0.3}, {0.8, 1.5}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}};
+    double bounds[DIMENSIONS][2] = {{500, 700}, {3.0, 3.4}, {-0.3, 0.3}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {600, 680}, {-0.3, 0.3}, {0.8, 1.5}, {-2e-4, 2e-4}, {-2e-4, 2e-4}, {-2e-4, 2e-4}};
 
     // variable to keep track of the time
     clock_t start, end;
@@ -30,7 +35,7 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     double chiPS[runs];
     double sumPS, sumSA;
 
-    start = clock();
+    /*start = clock();
     for(int i = 0; i < runs; i++){
         printf("SA Iteration %d\n", i);
         chiSA[i] = simulatedAnnealing(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, 0.1, bounds);
@@ -39,25 +44,32 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
     end = clock();
 
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("SA CPU time: %f\n", cpu_time_used);
+    printf("SA CPU time: %f\n", cpu_time_used);*/
 
 
-    start = clock();
+    /*start = clock();
     for(int i = 0; i < runs; i++){
         printf("PS Iteration %d\n", i);
-        chiPS[i] = particleSwarm(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds);
+        fprintf(file, "PS Iteration %d\n", i);
+        chiPS[i] = particleSwarm(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds, file);
         sumPS += chiPS[i];
+        //fprintf(file, "the Chi-squared value is: %f\n", chiPS[i]);
     }
     
     end = clock();
 
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("PSO CPU time: %f\n", cpu_time_used);
+    fprintf(file, "PSO CPU time: %f\n", cpu_time_used/runs);
 
-    printf("SA average is: %f\n", sumSA/runs);
-    printf("PS average is: %f\n", sumPS/runs);
-    /*double answer[DIMENSIONS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    MetropolisHasting(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds, answer);*/
+    //printf("SA average is: %f\n", sumSA/runs);
+    fprintf(file, "PS average is: %f with swarm size of: %d and max iter num of: %d\n", sumPS/runs, SWARM_SIZE, MAX_ITERATIONS_PS);
+    fclose(file);*/ 
+    double answer[DIMENSIONS] = {645.8266, 3.0532, -0.1412, 4.11002e-06, -0.000130806, 0.0000687175, 734.6413, -0.3421, 0.8435, 9.202323, 0.0000511648, -0.0000177663};
+    for(int i = 0; i < runs; i++){
+        printf("run %d", i);
+        MetropolisHasting(bcMeasured, afm, bcTilted, bcAFMmOut, mStdDev, simStdDev, bounds, answer);
+    }
+    
 
 }
 
@@ -259,7 +271,7 @@ void moveParticle(Particle *particle, double *global_best_position, double bound
 
 
 // Particle Swarm Optimization algorithm
-double particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2]) {
+double particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double bounds[][2], FILE *file) {
     
     Particle swarm[SWARM_SIZE];
     double global_best_value = INFINITY;
@@ -309,11 +321,11 @@ double particleSwarm(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilt
         //printf("Iteration %d with chi squared = %f\n", iter, global_best_value);
     }
 
-    printf("Best solution:\n");
+    fprintf(file, "Best solution:\n");
     for (int i = 0; i < DIMENSIONS; i++){
-        printf("x[%d] = %f\n", i, global_best_position[i]);
+        fprintf(file, "x[%d] = %f\n", i, global_best_position[i]);
     }
-    printf("with chi squared = %f\n", global_best_value);
+    fprintf(file, "with chi squared = %f\n", global_best_value);
     return global_best_value;
 
 }

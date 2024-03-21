@@ -378,14 +378,16 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
                 //printf("%d ", (int)bcAFMm.map[GREYSCALE_LAYER][row][col]);
                 if(bcAFMm.map[GREYSCALE_LAYER][row][col] >= GREYSCALE_DEFAULT * 255.0){  // is white, not mapped, show background
 
-                    bcSolidOverlap.greyScale[row][col]    = bcTilted.greyScale[row][col];
+                    //bcSolidOverlap.greyScale[row][col]    = bcTilted.greyScale[row][col];
+                    bcSolidOverlap.greyScale[row][col]    = 127.5;
                     bcTransOverlap.greyScale[row][col]    = bcTilted.greyScale[row][col];
                     bcDifference.greyScale[row][col]      = 127.5;  //255.0/2.0
                 }
                 else{ // mapped, show data
                     bcSolidOverlap.greyScale[row][col] = bcAFMm.map[GREYSCALE_LAYER][row][col];
                     bcTransOverlap.greyScale[row][col] = (measuredOpacity)*bcAFMm.map[GREYSCALE_LAYER][row][col] + (1.0-measuredOpacity)*bcTilted.greyScale[row][col];
-                    bcDifference.greyScale[row][col]   = 0.5*((bcTilted.greyScale[row][col] - bcAFMm.map[GREYSCALE_LAYER][row][col]) + 255.0);
+                    //bcDifference.greyScale[row][col]   = 0.5*((bcTilted.greyScale[row][col] - bcAFMm.map[GREYSCALE_LAYER][row][col]) + 255.0);
+                    bcDifference.greyScale[row][col]   = ((bcTilted.greyScale[row][col] - bcAFMm.map[GREYSCALE_LAYER][row][col]) + 255.0);
                 }
             }
         }
