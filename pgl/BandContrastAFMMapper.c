@@ -115,6 +115,7 @@ BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast *bcMeasured, AFMDat
                     newRow = floor(b0 + b1*rowDiff + b2*colDiff + b3*rowDiff*rowDiff + b4*colDiff*colDiff + b5*rowDiff*colDiff + 0.5); //y from X, Y
 
                     // If within bounds and still default value:
+                    // TODO: interexting stuff happens here
                     if(newRow >= 0 && newRow < bcAFMm.nrow && newCol >= 0 && newCol < bcAFMm.ncol && bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] == GREYSCALE_DEFAULT){
                         if (row == 0 || col == 0 || row == (bcMeasured->nrow-1) || col == (bcMeasured->ncol-1)  || row == 1 || col == 1 || row == (bcMeasured->nrow-2) || col == (bcMeasured->ncol-2) || row == 2 || col == 2 || row == (bcMeasured->nrow-3) || col == (bcMeasured->ncol-3)) {
                             // make it white

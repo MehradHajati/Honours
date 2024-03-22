@@ -373,6 +373,7 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
 
         double chiSquared = bandContrastAFMMapper_chiSquared(&bcAFMm, &bcTilted, mStdDev, simStdDev);
 
+        // TODO: interesting stuff happens here
         for(row = 0; row < bcAFMm.nrow; row++){
             for(col = 0; col < bcAFMm.ncol; col++){
                 //printf("%d ", (int)bcAFMm.map[GREYSCALE_LAYER][row][col]);
