@@ -85,6 +85,10 @@ BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast *bcMeasured, AFMDat
     midCol = bcMeasured->ncol / 2; // X
     BandContrastAFMMapper bcAFMm = bandContrastAFMMapper_new(afmTilted.xResolution, afmTilted.yResolution);
 
+   // TODO: create new layer in bcAFMm to indicate the overlapping pixels and boundary of overlapping region (values 0,1,2).
+   // Then use that information to count the number of overlapping pixels and add to the objective function,
+   // and to draw the black outlines on all required images and set background pixels.
+
 // NOTE: if value is GREYSCALE_DEFAULT then that pixel has not been mapped
     for(row = 0; row < bcMeasured->nrow; row++){
         rowDiff = row - midRow; // y - Y
