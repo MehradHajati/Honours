@@ -50,6 +50,7 @@ void runAmoeba(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, Ba
 double amoeba_chisq(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilted, BandContrastAFMMapper *bcAFMmOut, double mStdDev, double simStdDev, double *simplexCorner, double *asbs[], int ndim){
     double chiSquared = 0.0, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5;
     int row, col, overlappingPoints = 0, fitLevel;
+    double diff; // Added by Lelievre to mirror code in bandContrastAFMMapper_chiSquared, but ideally there should not be code duplication in such an important place!
     fitLevel = ndim / 2;
 
     // Should default as and bs be current as and bs even if not fitting those parameters. YES!
@@ -76,15 +77,22 @@ double amoeba_chisq(BandContrast *bcMeasured, AFMData afm, BandContrast *bcTilte
     for(row = 0; row < bcAFMmOut->nrow; row++){
         for(col = 0; col < bcAFMmOut->ncol; col++){
             // what to do about the transparency here
-            if(bcAFMmOut->map[GREYSCALE_LAYER][row][col] < GREYSCALE_DEFAULT * 255.0){ // Transparency
+            //if(bcAFMmOut->map[GREYSCALE_LAYER][row][col] < GREYSCALE_DEFAULT * 255.0){ // Transparency
+            if(bcAFMmOut->map[OVERLAP_LAYER][row][col] != OVERLAP_DEFAULT){ // Changed by Lelievre.
                 // Chi Squared and difference here?
-                chiSquared += (bcAFMmOut->map[GREYSCALE_LAYER][row][col] - bcTilted->greyScale[row][col]) * (bcAFMmOut->map[GREYSCALE_LAYER][row][col] - bcTilted->greyScale[row][col]) / sqrt((mStdDev*mStdDev)*(simStdDev*simStdDev));
+                //chiSquared += (bcAFMmOut->map[GREYSCALE_LAYER][row][col] - bcTilted->greyScale[row][col]) * (bcAFMmOut->map[GREYSCALE_LAYER][row][col] - bcTilted->greyScale[row][col]) / sqrt((mStdDev*mStdDev)*(simStdDev*simStdDev));
+                
+                // Changed by Lelievre to mirror code in bandContrastAFMMapper_chiSquared, but ideally there should not be code duplication in such an important place!
+                diff = bcAFMmOut->map[GREYSCALE_LAYER][row][col] - bcTilted->greyScale[row][col];
+                chiSquared += diff*diff;
                 overlappingPoints++;
+
             }
         }
     }
 
-    if(overlappingPoints != 0) chiSquared /= (double)overlappingPoints;
+    //if(overlappingPoints != 0) chiSquared /= (double)overlappingPoints;
+    if(overlappingPoints != 0) chiSquared /= ((double)overlappingPoints * sqrt((mStdDev*mStdDev)*(simStdDev*simStdDev))); // Changed by Lelievre to mirror code in bandContrastAFMMapper_chiSquared, but ideally there should not be code duplication in such an important place!
     else chiSquared = 99999999;
     bandContrastAFMMapper_free(bcAFMmOut);
     return chiSquared;

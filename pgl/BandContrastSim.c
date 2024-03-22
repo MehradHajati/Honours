@@ -102,6 +102,7 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
     int binnedThere;
     AFMData afm;
     int facetTypeFlag;
+    double diff; // Lelievre added
 
     // Read or compute the binned AFM data
     // allocating the memory 
@@ -196,7 +197,7 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
     printf("Starting simulation\n");
     BandContrastAFMMapper bcAFMm;
     double rad = (180.0 - lightDeg) * M_PI / 180.0;
-    printf("the value of M_pi is: %d\n", M_PI);
+    printf("the value of M_pi is: %f\n", M_PI); // Lelievre fixed compile warning.
     Vector3 light; 
     light.x = 0; light.y = cos(rad); light.z = -sin(rad);
     light = vector3_scale(light, 1 / vector3_magnitude(light));
@@ -229,7 +230,8 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
     };
 
     // Tilt the simulated band contrast
-    BandContrast bcTilted, bcDifference, bcSolidOverlap, bcTransOverlap;    
+    BandContrast bcTilted, bcDifference, bcSolidOverlap, bcTransOverlap;
+    BandContrast bcAbsDifference, bcAFMandOutline; // Added by Lelievre.
     double simAvg, simStdDev, simMin = DBL_MAX, simMax = DBL_MIN, val;
     // this for loop is used to tilt, then stretch and scale all three pictures created above
     for(i = 0; i < NUMBCS; i++){  // NUMBCS = 3 right now
@@ -370,25 +372,42 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
         bcSolidOverlap  = bandContrast_new(bcTilted.nrow, bcTilted.ncol);
         bcTransOverlap  = bandContrast_new(bcTilted.nrow, bcTilted.ncol);
         bcDifference    = bandContrast_new(bcTilted.nrow, bcTilted.ncol);
+        bcAbsDifference = bandContrast_new(bcTilted.nrow, bcTilted.ncol); // Added by Lelievre.
+        bcAFMandOutline = bandContrast_new(bcTilted.nrow, bcTilted.ncol); // Added by Lelievre.
 
         double chiSquared = bandContrastAFMMapper_chiSquared(&bcAFMm, &bcTilted, mStdDev, simStdDev);
 
-        // TODO: interesting stuff happens here
         for(row = 0; row < bcAFMm.nrow; row++){
             for(col = 0; col < bcAFMm.ncol; col++){
                 //printf("%d ", (int)bcAFMm.map[GREYSCALE_LAYER][row][col]);
-                if(bcAFMm.map[GREYSCALE_LAYER][row][col] >= GREYSCALE_DEFAULT * 255.0){  // is white, not mapped, show background
-
+                //if(bcAFMm.map[GREYSCALE_LAYER][row][col] >= GREYSCALE_DEFAULT * 255.0){  // is white, not mapped, show background
+                if(bcAFMm.map[OVERLAP_LAYER][row][col] == OVERLAP_DEFAULT){  // Changed by Lelievre.
                     //bcSolidOverlap.greyScale[row][col]    = bcTilted.greyScale[row][col];
                     bcSolidOverlap.greyScale[row][col]    = 127.5;
                     bcTransOverlap.greyScale[row][col]    = bcTilted.greyScale[row][col];
                     bcDifference.greyScale[row][col]      = 127.5;  //255.0/2.0
+                    bcAbsDifference.greyScale[row][col]   = 0.0; // Added by Lelievre.
                 }
                 else{ // mapped, show data
                     bcSolidOverlap.greyScale[row][col] = bcAFMm.map[GREYSCALE_LAYER][row][col];
                     bcTransOverlap.greyScale[row][col] = (measuredOpacity)*bcAFMm.map[GREYSCALE_LAYER][row][col] + (1.0-measuredOpacity)*bcTilted.greyScale[row][col];
-                    //bcDifference.greyScale[row][col]   = 0.5*((bcTilted.greyScale[row][col] - bcAFMm.map[GREYSCALE_LAYER][row][col]) + 255.0);
-                    bcDifference.greyScale[row][col]   = ((bcTilted.greyScale[row][col] - bcAFMm.map[GREYSCALE_LAYER][row][col]) + 255.0);
+                    diff = bcTilted.greyScale[row][col] - bcAFMm.map[GREYSCALE_LAYER][row][col];
+                    bcDifference.greyScale[row][col]   = 0.5*(diff + 255.0); // now the zero level is 127.5 and we just hope they are on [0,255]
+                    bcAbsDifference.greyScale[row][col] = fabs(diff); // absolute difference on [0,255]; Added by Lelievre.
+                }
+                bcAFMandOutline.greyScale[row][col] = bcTilted.greyScale[row][col]; // Added by Lelievre (just a copy of bcTilted and we add the outline of the overlapping area below).
+            }
+        }
+
+        // Add on the indication of the boundary outline of the overlapping area: (added by Lelievre)
+        for(row = 0; row < bcAFMm.nrow; row++){
+            for(col = 0; col < bcAFMm.ncol; col++){
+                if (bcAFMm.map[OVERLAP_LAYER][row][col] == OVERLAP_BOUNDARY){
+                    // use 0.0 for black, 255.0 for white
+                    bcSolidOverlap.greyScale[row][col]  = 0.0;
+                    bcTransOverlap.greyScale[row][col]  = 0.0;
+                    bcDifference.greyScale[row][col]    = 0.0;
+                    bcAFMandOutline.greyScale[row][col] = 0.0;
                 }
             }
         }
@@ -403,23 +422,36 @@ void runBandContrastSim(char *fileName, char *simOutputDir, char *measuredFN, ch
 
         char *bcDiffFN = (char *)malloc(sizeof(char) * MAXPATH);
         strcpy(bcDiffFN, simOutputDir);
-        strcat(bcDiffFN, "/diff.pgm");
+        strcat(bcDiffFN, "/Diff.pgm");
         bitmapWriter_writePGM(bcDiffFN, bcDifference.greyScale, 0, bcDifference.nrow, 0, bcDifference.ncol, true);
         free(bcDiffFN);
+
+        char *bcAbsDiffFN = (char *)malloc(sizeof(char) * MAXPATH);
+        strcpy(bcAbsDiffFN, simOutputDir);
+        strcat(bcAbsDiffFN, "/AbsDiff.pgm");
+        bitmapWriter_writePGM(bcAbsDiffFN, bcAbsDifference.greyScale, 0, bcAbsDifference.nrow, 0, bcAbsDifference.ncol, true);
+        free(bcAbsDiffFN);
 
         // measured solid on top of simulated
         char *bcSolidOverlapFN = (char *)malloc(sizeof(char) * MAXPATH);
         strcpy(bcSolidOverlapFN, simOutputDir);
-        strcat(bcSolidOverlapFN, "/BCsolid.pgm");
+        strcat(bcSolidOverlapFN, "/BCMapped.pgm");
         bitmapWriter_writePGM(bcSolidOverlapFN, bcSolidOverlap.greyScale, 0, bcSolidOverlap.nrow, 0, bcSolidOverlap.ncol, true);
         free(bcSolidOverlapFN);
 
         // measured with measuredOpacity on top of simulated
         char * bcAFMOverlapFN = (char *)malloc(sizeof(char) * MAXPATH);
         strcpy(bcAFMOverlapFN, simOutputDir);
-        strcat(bcAFMOverlapFN, "/BCfitted.pgm");
+        strcat(bcAFMOverlapFN, "/Overlap.pgm");
         bitmapWriter_writePGM(bcAFMOverlapFN, bcTransOverlap.greyScale, 0, bcAFMm.nrow, 0, bcAFMm.ncol, true);
         free(bcAFMOverlapFN);
+
+        // simulated indication of boundary of overlapping area (added by Lelievre)
+        char * bcAFMandOutlineFN = (char *)malloc(sizeof(char) * MAXPATH);
+        strcpy(bcAFMandOutlineFN, simOutputDir);
+        strcat(bcAFMandOutlineFN, "/Simulated.pgm");
+        bitmapWriter_writePGM(bcAFMandOutlineFN, bcAFMandOutline.greyScale, 0, bcAFMm.nrow, 0, bcAFMm.ncol, true);
+        free(bcAFMandOutlineFN);
 
         bandContrast_free(&bcDifference);
         

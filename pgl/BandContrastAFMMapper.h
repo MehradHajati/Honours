@@ -9,10 +9,14 @@
 
 #define GREYSCALE_DEFAULT 1
 #define OLD_POSITION_DEFAULT -1
+#define OVERLAP_DEFAULT 0 // Added by Lelievre: this value indicates non-overlapping pixels.
+#define OVERLAP_INSIDE 1 // Added by Lelievre: this value indicates overlapping pixels inside the overlapping area.
+#define OVERLAP_BOUNDARY 2 // Added by Lelievre: this value indicates overlapping pixels on the boundary of the overlapping area (for painting the boundary).
 #define GREYSCALE_LAYER 0
 #define OLD_ROW_LAYER 1
 #define OLD_COL_LAYER 2
-#define NUMBER_OF_LAYERS_IN_BCAFMM 3
+#define OVERLAP_LAYER 3 // Added by Lelievre.
+#define NUMBER_OF_LAYERS_IN_BCAFMM 4 // Changed from 3 to 4 by Lelievre to add additional layer of overlap information.
 
 typedef struct {
 

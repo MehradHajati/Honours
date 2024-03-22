@@ -24,12 +24,13 @@ BandContrastAFMMapper bandContrastAFMMapper_new(int nrow, int ncol){
         }
     }
 
-    // setting all the deafult values for the 3d matrix/map
+    // setting all the default values for the 3d matrix/map
     for(row = 0; row < bcAFMm.nrow; row++){
         for(col = 0; col < bcAFMm.ncol; col++){
             bcAFMm.map[GREYSCALE_LAYER][row][col] = GREYSCALE_DEFAULT;
             bcAFMm.map[OLD_ROW_LAYER][row][col] = OLD_POSITION_DEFAULT;
             bcAFMm.map[OLD_COL_LAYER][row][col] = OLD_POSITION_DEFAULT;
+            bcAFMm.map[OVERLAP_LAYER][row][col] = OVERLAP_DEFAULT; // added by Lelievre to indicate pixels inside and on boundary of overlapping area
         }
     }
 
@@ -85,11 +86,8 @@ BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast *bcMeasured, AFMDat
     midCol = bcMeasured->ncol / 2; // X
     BandContrastAFMMapper bcAFMm = bandContrastAFMMapper_new(afmTilted.xResolution, afmTilted.yResolution);
 
-   // TODO: create new layer in bcAFMm to indicate the overlapping pixels and boundary of overlapping region (values 0,1,2).
-   // Then use that information to count the number of overlapping pixels and add to the objective function,
-   // and to draw the black outlines on all required images and set background pixels.
-
 // NOTE: if value is GREYSCALE_DEFAULT then that pixel has not been mapped
+// NOTE: Changed by Lelievre so if value is OVERLAP_DEFAULT then that pixel has not been mapped.
     for(row = 0; row < bcMeasured->nrow; row++){
         rowDiff = row - midRow; // y - Y
         for(col = 0; col < bcMeasured->ncol; col++){
@@ -99,10 +97,19 @@ BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast *bcMeasured, AFMDat
             newRow = floor(b0 + b1*rowDiff + b2*colDiff + b3*rowDiff*rowDiff + b4*colDiff*colDiff + b5*rowDiff*colDiff + 0.5); //y from X, Y
 
             // If within bounds and still default value:
-            if(newRow >= 0 && newRow < bcAFMm.nrow && newCol >= 0 && newCol < bcAFMm.ncol && bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] == GREYSCALE_DEFAULT){
+            //if(newRow >= 0 && newRow < bcAFMm.nrow && newCol >= 0 && newCol < bcAFMm.ncol && bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] == GREYSCALE_DEFAULT){
+            if(newRow >= 0 && newRow < bcAFMm.nrow && newCol >= 0 && newCol < bcAFMm.ncol && bcAFMm.map[OVERLAP_LAYER][newRow][newCol] == OVERLAP_DEFAULT){ // Changed by Lelievre.
                 bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] = bcMeasured->greyScale[row][col];
                 bcAFMm.map[OLD_ROW_LAYER][newRow][newCol] = row;
                 bcAFMm.map[OLD_COL_LAYER][newRow][newCol] = col;
+
+                // Set overlap information: (added by Lelievre)
+                if ( row <= 2 || col <= 2 || row >= (bcMeasured->nrow-3) || col >= (bcMeasured->ncol-3) ) { // NOTE: there is some padding here so the boundary is drawn thicker but it must go INSIDE the region, never outside, otherwise chi-squared calculation doesn't work!
+                    bcAFMm.map[OVERLAP_LAYER][newRow][newCol] = OVERLAP_BOUNDARY;
+                } else {
+                    bcAFMm.map[OVERLAP_LAYER][newRow][newCol] = OVERLAP_INSIDE;
+                }
+
             }
         }
     }
@@ -119,18 +126,19 @@ BandContrastAFMMapper bandContrastAFMMapper_map(BandContrast *bcMeasured, AFMDat
                     newRow = floor(b0 + b1*rowDiff + b2*colDiff + b3*rowDiff*rowDiff + b4*colDiff*colDiff + b5*rowDiff*colDiff + 0.5); //y from X, Y
 
                     // If within bounds and still default value:
-                    // TODO: interexting stuff happens here
-                    if(newRow >= 0 && newRow < bcAFMm.nrow && newCol >= 0 && newCol < bcAFMm.ncol && bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] == GREYSCALE_DEFAULT){
-                        if (row == 0 || col == 0 || row == (bcMeasured->nrow-1) || col == (bcMeasured->ncol-1)  || row == 1 || col == 1 || row == (bcMeasured->nrow-2) || col == (bcMeasured->ncol-2) || row == 2 || col == 2 || row == (bcMeasured->nrow-3) || col == (bcMeasured->ncol-3)) {
-                            // make it white
-                            bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] = 0;
-                        }
-                        else{
-                            bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] = bcMeasured->greyScale[row][col];
-                        }
-                        
+                    //if(newRow >= 0 && newRow < bcAFMm.nrow && newCol >= 0 && newCol < bcAFMm.ncol && bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] == GREYSCALE_DEFAULT){
+                    if(newRow >= 0 && newRow < bcAFMm.nrow && newCol >= 0 && newCol < bcAFMm.ncol && bcAFMm.map[OVERLAP_LAYER][newRow][newCol] == OVERLAP_DEFAULT){ // Changed by Lelievre.
+                        bcAFMm.map[GREYSCALE_LAYER][newRow][newCol] = bcMeasured->greyScale[row][col];
                         bcAFMm.map[OLD_ROW_LAYER][newRow][newCol] = row;
                         bcAFMm.map[OLD_COL_LAYER][newRow][newCol] = col;
+
+                        // Set overlap information: (added by Lelievre)
+                        if ( row <= 2 || col <= 2 || row >= (bcMeasured->nrow-3) || col >= (bcMeasured->ncol-3) ) { // NOTE: there is some padding here but it must go INSIDE the region, never outside, otherwise chi-squared calculation doesn't work!
+                           bcAFMm.map[OVERLAP_LAYER][newRow][newCol] = OVERLAP_BOUNDARY;
+                        } else {
+                           bcAFMm.map[OVERLAP_LAYER][newRow][newCol] = OVERLAP_INSIDE;
+                        }
+
                     }
                 }                
             }
@@ -156,7 +164,8 @@ double bandContrastAFMMapper_chiSquared(BandContrastAFMMapper *bcAFMm, BandContr
 
     for(row = 0; row < bcAFMm->nrow; row++){
         for(col = 0; col < bcAFMm->ncol; col++){
-            if(bcAFMm->map[GREYSCALE_LAYER][row][col] < GREYSCALE_DEFAULT * 255.0){ // Transparency
+            //if(bcAFMm->map[GREYSCALE_LAYER][row][col] < GREYSCALE_DEFAULT * 255.0){ // Transparency
+            if(bcAFMm->map[OVERLAP_LAYER][row][col] != OVERLAP_DEFAULT){ // Changed by Lelievre.
                 // Chi Squared and difference here?
                 diff = bcAFMm->map[GREYSCALE_LAYER][row][col] - bcTilted->greyScale[row][col];
                 chiSquared += diff*diff;
