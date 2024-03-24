@@ -1,3 +1,6 @@
+// To compile:
+// gcc -o BandContrastSim AFM.c AFMDataReader.c AFMDataWriter.c Amoeba.c Atom.c BandContrast.c BandContrastAFMMapper.c BandContrastReader.c BandContrastSim.c BandContrastWriter.c BitmapWriter.c Facets.c FacetsReader.c FacetsWriter.c Matrix.c Quaternion.c SampleStretcher.c Tilt.c Utility.c Vector3.c
+
 #define true 1
 #define false 0
 #define bool int
